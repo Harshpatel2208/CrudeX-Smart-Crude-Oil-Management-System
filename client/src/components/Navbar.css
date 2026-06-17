@@ -1,0 +1,49 @@
+.custom-navbar {
+  height: var(--navbar-height);
+  left: var(--sidebar-width);
+  background-color: rgba(11, 15, 25, 0.8) !important; /* Matches --bg-light with opacity */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1010;
+  transition: left 0.3s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+@media (max-width: 991.98px) {
+  .custom-navbar {
+    left: 0;
+  }
+}
+
+.custom-navbar .form-control {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary) !important;
+}
+
+.custom-navbar .form-control:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+
+.search-dropdown-menu {
+  background-color: var(--card-bg) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+  animation: fadeIn 0.15s ease-out;
+  border-radius: 16px !important;
+}
+
+.text-xs {
+  font-size: 0.725rem;
+  letter-spacing: 0.05em;
+}
+
+.text-sm {
+  font-size: 0.85rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

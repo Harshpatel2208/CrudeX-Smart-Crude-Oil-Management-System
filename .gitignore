@@ -1,0 +1,17 @@
+# Dependency directories
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Local env files
+.env
+server/.env
+
+# Build outputs
+dist/
+client/dist/
+
+# OS metadata files
+.DS_Store
+Thumbs.db
+__MACOSX/

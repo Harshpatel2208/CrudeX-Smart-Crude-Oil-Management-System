@@ -1,0 +1,27 @@
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  .app-container, .sidebar, .custom-navbar, .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  .sidebar, .custom-navbar, .print-hide {
+    display: none !important;
+  }
+  .main-content {
+    padding-top: 0 !important;
+    margin-left: 0 !important;
+  }
+  .invoice-print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

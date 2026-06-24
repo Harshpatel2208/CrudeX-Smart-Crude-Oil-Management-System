@@ -202,20 +202,18 @@ const Opportunities = () => {
           <p className="text-muted text-sm">Manage potential deals, probability ratings, and stages</p>
         </div>
         <div className="d-flex align-items-center gap-2">
-          <div className="btn-group" role="group">
-            <button
-              className={`btn btn-sm ${viewMode === 'kanban' ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={() => setViewMode('kanban')}
-            >
-              <i className="bi bi-kanban me-1"></i> Kanban
-            </button>
-            <button
-              className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={() => setViewMode('list')}
-            >
-              <i className="bi bi-list-task me-1"></i> List View
-            </button>
-          </div>
+          <button
+            className={`btn btn-sm ${viewMode === 'kanban' ? 'btn-primary' : 'btn-outline-primary'}`}
+            onClick={() => setViewMode('kanban')}
+          >
+            <i className="bi bi-kanban me-1"></i> Board View
+          </button>
+          <button
+            className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-outline-primary'}`}
+            onClick={() => setViewMode('list')}
+          >
+            <i className="bi bi-list-task me-1"></i> List View
+          </button>
           <button className="btn btn-primary btn-sm" onClick={handleOpenAdd}>
             <i className="bi bi-plus-lg me-1"></i> Add Opportunity
           </button>

@@ -71,11 +71,11 @@ const AppRoutes = () => {
             <Route path="invoices" element={<Invoices />} />
             <Route path="payments" element={<Payments />} />
             
-            {/* Admin/Manager only permissions example */}
+            {/* Admin/Manager/Employee permissions */}
             <Route
               path="activity-logs"
               element={
-                <ProtectedRoute allowedRoles={['Admin', 'Manager']}>
+                <ProtectedRoute allowedRoles={['Admin', 'Manager', 'Employee']}>
                   <ActivityLogs />
                 </ProtectedRoute>
               }

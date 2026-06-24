@@ -1,9 +1,124 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import Swal from 'sweetalert2';
 import './Navbar.css';
 
-const Navbar = ({ onSearchResults, toggleSidebar }) => {
+// Exhaustive dictionary of languages supported by Google Translate
+const SUPPORTED_LANGUAGES = {
+  'af': 'Afrikaans',
+  'sq': 'Albanian (Shqip)',
+  'am': 'Amharic (አማርኛ)',
+  'ar': 'العربية (Arabic)',
+  'hy': 'Armenian (Հայերեն)',
+  'az': 'Azerbaijani (Azərbaycan)',
+  'eu': 'Basque (Euskara)',
+  'be': 'Belarusian (Беларуская)',
+  'bn': 'Bengali (বাংলা)',
+  'bs': 'Bosnian (Bosanski)',
+  'bg': 'Bulgarian (Български)',
+  'ca': 'Catalan (Català)',
+  'ceb': 'Cebuano',
+  'ny': 'Chichewa',
+  'zh-CN': 'Chinese Simplified (简体中文)',
+  'zh-TW': 'Chinese Traditional (繁體中文)',
+  'co': 'Corsican (Corse)',
+  'hr': 'Croatian (Hrvatski)',
+  'cs': 'Czech (Čeština)',
+  'da': 'Danish (Dansk)',
+  'nl': 'Nederlands (Dutch)',
+  'en': 'English',
+  'eo': 'Esperanto',
+  'et': 'Estonian (Eesti)',
+  'tl': 'Filipino (Tagalog)',
+  'fi': 'Finnish (Suomi)',
+  'fr': 'Français (French)',
+  'fy': 'Frisian (Frysk)',
+  'gl': 'Galician (Galego)',
+  'ka': 'Georgian (ქართული)',
+  'de': 'Deutsch (German)',
+  'el': 'Greek (Ελληνικά)',
+  'gu': 'Gujarati (ગુજરાતી)',
+  'ht': 'Haitian Creole (Kreyòl Ayisyen)',
+  'ha': 'Hausa',
+  'haw': 'Hawaiian (ʻŌlelo Hawaiʻi)',
+  'iw': 'Hebrew (עברית)',
+  'hi': 'Hindi (हिन्दी)',
+  'hmn': 'Hmong',
+  'hu': 'Hungarian (Magyar)',
+  'is': 'Icelandic (Íslenska)',
+  'ig': 'Igbo',
+  'id': 'Indonesian (Bahasa Indonesia)',
+  'ga': 'Irish (Gaeilge)',
+  'it': 'Italiano (Italian)',
+  'ja': '日本語 (Japanese)',
+  'jw': 'Javanese (Basa Jawa)',
+  'kn': 'Kannada (ಕನ್ನಡ)',
+  'kk': 'Kazakh (Қาзақ)',
+  'km': 'Khmer (الخمير)',
+  'rw': 'Kinyarwanda',
+  'ko': 'Korean (한국어)',
+  'ku': 'Kurdish (Kurmancî)',
+  'ky': 'Kyrgyz (Кыргызча)',
+  'lo': 'Lao (ລາວ)',
+  'la': 'Latin (Latina)',
+  'lv': 'Latvian (Latviešu)',
+  'lt': 'Lithuanian (Lietuvių)',
+  'lb': 'Luxembourgish (Lëtzebuergesch)',
+  'mk': 'Macedonian (Македонски)',
+  'mg': 'Malagasy',
+  'ms': 'Malay (Bahasa Melayu)',
+  'ml': 'Malayalam (മലയാളം)',
+  'mt': 'Maltese (Malti)',
+  'mi': 'Maori (Māori)',
+  'mr': 'Marathi (मराठी)',
+  'mn': 'Mongolian (Монгол)',
+  'my': 'Myanmar (Burmese) (မြန်မာ)',
+  'ne': 'Nepali (नेपाली)',
+  'no': 'Norwegian (Norsk)',
+  'or': 'Odia (Oriya) (ଓଡ଼ିଆ)',
+  'ps': 'Pashto (پښتو)',
+  'fa': 'Persian (فارسي)',
+  'pl': 'Polish (Polski)',
+  'pt': 'Português (Portuguese)',
+  'pa': 'Punjabi (ਪੰਜਾਬੀ)',
+  'ro': 'Romanian (Română)',
+  'ru': 'Russian (Русский)',
+  'sm': 'Samoan',
+  'gd': 'Scots Gaelic (Gàidhlig)',
+  'sr': 'Serbian (Српски)',
+  'st': 'Sesotho',
+  'sn': 'Shona (Chishona)',
+  'sd': 'Sindhi (سنڌي)',
+  'si': 'Sinhala (සිංහල)',
+  'sk': 'Slovak (Slovenčina)',
+  'sl': 'Slovenian (Slovenščina)',
+  'so': 'Somali (Soomaali)',
+  'es': 'Español (Spanish)',
+  'su': 'Sundanese',
+  'sw': 'Swahili (Kiswahili)',
+  'sv': 'Svenska (Swedish)',
+  'tg': 'Tajik (Тоҷикӣ)',
+  'ta': 'Tamil (தமிழ்)',
+  'tt': 'Tatar',
+  'te': 'Telugu (తెలుగు)',
+  'th': 'Thai (ไทย)',
+  'tr': 'Türkçe (Turkish)',
+  'tk': 'Turkmen (Türkmen)',
+  'uk': 'Ukrainian (Українська)',
+  'ur': 'Urdu (اردو)',
+  'ug': 'Uyghur (ئۇيغۇر)',
+  'uz': 'Uzbek (Oʻzbek)',
+  'vi': 'Tiếng Việt (Vietnamese)',
+  'cy': 'Welsh (Cymraeg)',
+  'xh': 'Xhosa (isiXhosa)',
+  'yi': 'Yiddish (ייִديش)',
+  'yo': 'Yoruba (Yorùbá)',
+  'zu': 'Zulu (isiZulu)'
+};
+
+const Navbar = ({ onSearchResults, toggleSidebar, toggleFullscreen, isFullscreen }) => {
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
@@ -14,6 +129,140 @@ const Navbar = ({ onSearchResults, toggleSidebar }) => {
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const alertsDropdownRef = useRef(null);
 
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(localStorage.getItem('crm_lang') || 'en');
+  const languageDropdownRef = useRef(null);
+
+  const defaultLanguages = [
+    { code: 'en', name: 'English' },
+    { code: 'hi', name: 'Hindi' },
+    { code: 'es', name: 'Español' },
+    { code: 'ar', name: 'العربية' }
+  ];
+
+  const [activeLanguages, setActiveLanguages] = useState(() => {
+    const saved = localStorage.getItem('crm_languages');
+    return saved ? JSON.parse(saved) : defaultLanguages;
+  });
+
+  const handleLanguageChange = (lang) => {
+    setCurrentLanguage(lang);
+    localStorage.setItem('crm_lang', lang);
+    setShowLanguageDropdown(false);
+
+    // Trigger Google Translate dropdown programmatically
+    const selectEl = document.querySelector('.goog-te-combo');
+    if (selectEl) {
+      selectEl.value = lang;
+      selectEl.dispatchEvent(new Event('change'));
+    }
+
+    const displayLangName = SUPPORTED_LANGUAGES[lang]?.split(' (')[0] || lang.toUpperCase();
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: `Language switched to ${displayLangName}`,
+      showConfirmButton: false,
+      timer: 2000
+    });
+  };
+
+  const handleAddLanguage = () => {
+    // Filter out languages that are already added
+    const availableOptions = {};
+    Object.keys(SUPPORTED_LANGUAGES).forEach(code => {
+      if (!activeLanguages.some(l => l.code === code)) {
+        availableOptions[code] = SUPPORTED_LANGUAGES[code];
+      }
+    });
+
+    if (Object.keys(availableOptions).length === 0) {
+      Swal.fire('Info', 'All available languages have been added.', 'info');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Add New Language',
+      input: 'select',
+      inputOptions: availableOptions,
+      inputPlaceholder: 'Select a language',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Add Language'
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const newCode = result.value;
+        const newName = SUPPORTED_LANGUAGES[newCode].split(' (')[0]; // Simplify name, e.g. "French"
+        const updated = [...activeLanguages, { code: newCode, name: newName }];
+        setActiveLanguages(updated);
+        localStorage.setItem('crm_languages', JSON.stringify(updated));
+        
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `Added ${newName} to selector`,
+          showConfirmButton: false,
+          timer: 2000
+        });
+      }
+    });
+  };
+
+  const handleDeleteLanguage = (e, codeToDelete) => {
+    e.stopPropagation(); // Prevent language switch when clicking delete button
+    
+    if (codeToDelete === 'en') {
+      Swal.fire('Error', 'Cannot delete English (default system language).', 'error');
+      return;
+    }
+
+    const updated = activeLanguages.filter(l => l.code !== codeToDelete);
+    setActiveLanguages(updated);
+    localStorage.setItem('crm_languages', JSON.stringify(updated));
+
+    // If the currently selected language was deleted, reset to English
+    if (currentLanguage === codeToDelete) {
+      handleLanguageChange('en');
+    } else {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: `Removed language option`,
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
+  };
+
+  // Persistent language auto-apply on load
+  useEffect(() => {
+    const savedLang = localStorage.getItem('crm_lang') || 'en';
+    if (savedLang !== 'en') {
+      const interval = setInterval(() => {
+        const selectEl = document.querySelector('.goog-te-combo');
+        if (selectEl) {
+          selectEl.value = savedLang;
+          selectEl.dispatchEvent(new Event('change'));
+          clearInterval(interval);
+          document.documentElement.classList.remove('translation-loading');
+        }
+      }, 500);
+      
+      // Stop checking after 10 seconds to avoid memory leaks and fallback to visible page
+      setTimeout(() => {
+        clearInterval(interval);
+        document.documentElement.classList.remove('translation-loading');
+      }, 10000);
+    } else {
+      document.documentElement.classList.remove('translation-loading');
+    }
+  }, []);
+
   useEffect(() => {
     // Hide dropdown when clicking outside
     const handleClickOutside = (event) => {
@@ -22,6 +271,9 @@ const Navbar = ({ onSearchResults, toggleSidebar }) => {
       }
       if (alertsDropdownRef.current && !alertsDropdownRef.current.contains(event.target)) {
         setShowAlertsDropdown(false);
+      }
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target)) {
+        setShowLanguageDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -148,6 +400,12 @@ const Navbar = ({ onSearchResults, toggleSidebar }) => {
           <i className="bi bi-list fs-3"></i>
         </button>
 
+        {/* Crude-X Logo */}
+        <Link to="/" className="d-flex align-items-center me-3 text-decoration-none navbar-brand-logo">
+          <i className="bi bi-droplet-fill text-warning fs-4 me-2"></i>
+          <span className="fw-bold text-white fs-5 m-0 logo-text notranslate">Crude-X</span>
+        </Link>
+
         {/* Search Input wrapper */}
         <div className="d-flex align-items-center flex-grow-1" ref={dropdownRef}>
           <div className="position-relative w-100" style={{ maxWidth: '400px' }}>
@@ -218,10 +476,59 @@ const Navbar = ({ onSearchResults, toggleSidebar }) => {
 
         {/* Right Nav Menu items */}
         <div className="navbar-nav ms-auto align-items-center gap-3">
-          {/* Globe language icon */}
-          <button className="btn btn-link text-secondary p-0 hover-warning d-flex align-items-center justify-content-center" title="Language" style={{ textDecoration: 'none' }}>
-            <i className="bi bi-globe fs-5"></i>
+          {/* Fullscreen Toggle Button */}
+          <button 
+            onClick={toggleFullscreen} 
+            className="btn btn-link text-secondary p-0 hover-warning d-flex align-items-center justify-content-center" 
+            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"} 
+            style={{ textDecoration: 'none' }}
+          >
+            <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-fullscreen'} fs-5`}></i>
           </button>
+
+          {/* Globe language icon */}
+          <div className="position-relative" ref={languageDropdownRef}>
+            <button 
+              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)} 
+              className="btn btn-link text-secondary p-0 hover-warning d-flex align-items-center justify-content-center" 
+              title="Language" 
+              style={{ textDecoration: 'none' }}
+            >
+              <i className="bi bi-globe fs-5"></i>
+              <span className="ms-1 text-xs fw-bold text-uppercase notranslate">{currentLanguage}</span>
+            </button>
+            {showLanguageDropdown && (
+              <ul className="dropdown-menu dropdown-menu-end show shadow border-0 rounded-3 mt-2 position-absolute notranslate" style={{ right: 0, zIndex: 1050, minWidth: '190px' }}>
+                {activeLanguages.map(lang => (
+                  <li key={lang.code}>
+                    <button 
+                      className="dropdown-item d-flex align-items-center justify-content-between py-2 text-sm notranslate" 
+                      onClick={() => handleLanguageChange(lang.code)}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        <span>{lang.name}</span>
+                        {currentLanguage === lang.code && <i className="bi bi-check text-warning fw-bold fs-5"></i>}
+                      </div>
+                      {lang.code !== 'en' && (
+                        <i 
+                          className="bi bi-trash text-danger ms-2 cursor-pointer" 
+                          onClick={(e) => handleDeleteLanguage(e, lang.code)}
+                          title="Delete language"
+                          style={{ fontSize: '0.9rem' }}
+                        ></i>
+                      )}
+                    </button>
+                  </li>
+                ))}
+                <li><hr className="dropdown-divider" /></li>
+                <li>
+                  <button className="dropdown-item text-primary text-center py-2 text-xs fw-bold" onClick={handleAddLanguage}>
+                    <i className="bi bi-plus-circle me-1"></i> Add Language
+                  </button>
+                </li>
+              </ul>
+            )}
+          </div>
           
           {/* Notification bell icon */}
           <div className="position-relative" ref={alertsDropdownRef}>
@@ -242,7 +549,7 @@ const Navbar = ({ onSearchResults, toggleSidebar }) => {
               <div className="dropdown-menu dropdown-menu-end show shadow border-0 rounded-4 p-3 mt-2 position-absolute" style={{ width: '300px', right: 0, zIndex: 1050 }}>
                 <div className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
                   <h6 className="m-0 fw-bold text-sm text-white" style={{ color: '#f8fafc' }}>System Alerts</h6>
-                  <span className="badge bg-secondary-subtle text-secondary text-xs">{alerts.length} New</span>
+                  <span className="badge bg-secondary-subtle text-dark text-xs">{alerts.length} New</span>
                 </div>
                 <div className="overflow-auto" style={{ maxHeight: '250px' }}>
                   {alerts.length === 0 ? (

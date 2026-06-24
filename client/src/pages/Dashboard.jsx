@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
@@ -10,29 +10,46 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [charts, setCharts] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    try {
+      const [statsRes, chartsRes] = await Promise.all([
+        api.get('/dashboard/stats'),
+        api.get('/dashboard/charts')
+      ]);
+      setStats(statsRes.data);
+      setCharts(chartsRes.data);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to fetch dashboard data.'
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsRes, chartsRes] = await Promise.all([
-          api.get('/dashboard/stats'),
-          api.get('/dashboard/charts')
-        ]);
-        setStats(statsRes.data);
-        setCharts(chartsRes.data);
-      } catch (error) {
-        console.error('Failed to load dashboard data:', error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Failed to fetch dashboard data.'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-  }, []);
+
+    const handleAppRefresh = () => {
+      fetchData(true);
+    };
+
+    window.addEventListener('app-refresh', handleAppRefresh);
+    return () => {
+      window.removeEventListener('app-refresh', handleAppRefresh);
+    };
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -142,8 +159,13 @@ const Dashboard = () => {
           <h2 className="fw-bold text-dark mb-0">Dashboard Overview</h2>
           <p className="text-muted text-sm">Real-time statistics & crude oil operations dashboard</p>
         </div>
-        <button className="btn btn-outline-primary" onClick={() => window.location.reload()}>
-          <i className="bi bi-arrow-clockwise me-1"></i> Refresh
+        <button className="btn btn-outline-primary d-flex align-items-center" onClick={() => fetchData(true)} disabled={refreshing}>
+          {refreshing ? (
+            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          ) : (
+            <i className="bi bi-arrow-clockwise me-1"></i>
+          )}
+          {refreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 

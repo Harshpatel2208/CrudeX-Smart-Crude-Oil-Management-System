@@ -23,10 +23,11 @@
   --sidebar-active-text: #080b13; /* Dark text for active gold capsule */
   
   /* Soft Tints */
-  --sky-tint: rgba(243, 168, 8, 0.15);
+  --sky-tint: rgba(56, 189, 248, 0.15);
   --emerald-tint: rgba(16, 185, 129, 0.15);
   --amber-tint: rgba(243, 168, 8, 0.15);
   --rose-tint: rgba(244, 63, 94, 0.15);
+  --cyan-tint: rgba(6, 182, 212, 0.15);
 }
 
 body {
@@ -254,6 +255,19 @@ h2, .page-header-title {
   letter-spacing: 0.02em;
 }
 
+/* Ensure dark text is actually dark on light/colored badge and avatar background elements */
+.badge.text-dark,
+.avatar.text-dark,
+.avatar-sm.text-dark,
+.bg-warning .text-dark,
+.bg-light .text-dark,
+.bg-secondary-subtle .text-dark,
+.bg-warning.text-dark,
+.bg-light.text-dark,
+.bg-secondary-subtle.text-dark {
+  color: var(--sidebar-active-text) !important;
+}
+
 .bg-success-subtle {
   background-color: var(--emerald-tint) !important;
   color: #34d399 !important; /* light emerald */
@@ -272,6 +286,15 @@ h2, .page-header-title {
 .bg-danger-subtle {
   background-color: var(--rose-tint) !important;
   color: #fb7185 !important; /* light rose */
+}
+
+.bg-info-subtle {
+  background-color: var(--cyan-tint) !important;
+  color: #22d3ee !important; /* light cyan */
+}
+
+.text-info {
+  color: #22d3ee !important;
 }
 
 /* Dark Tables design */
@@ -343,9 +366,14 @@ code {
 /* Glassmorphism Dark Modals */
 .modal-content {
   background-color: var(--card-bg) !important;
+  color: var(--text-secondary) !important;
   border-radius: 24px !important;
   border: 1px solid var(--border-color) !important;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5) !important;
+}
+
+.modal-content strong {
+  color: var(--text-primary) !important;
 }
 
 .modal-header {
@@ -482,4 +510,84 @@ code {
 
 .step-label.active {
   color: var(--text-primary) !important;
+}
+
+/* Hide Google Translate Banner and Widget elements */
+iframe.goog-te-banner-frame {
+  display: none !important;
+  visibility: hidden !important;
+}
+.goog-te-gadget {
+  display: none !important;
+  visibility: hidden !important;
+}
+body {
+  top: 0px !important;
+}
+#goog-gt-tt {
+  display: none !important;
+  visibility: hidden !important;
+}
+.skiptranslate {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Prevent flash of English content during dynamic translation */
+.translation-loading #root {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+#root {
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Fullscreen focused dashboard layout styles */
+.layout-fullscreen .sidebar {
+  width: 70px !important;
+}
+
+.layout-fullscreen .sidebar .brand-text,
+.layout-fullscreen .sidebar .nav-link span,
+.layout-fullscreen .sidebar .sidebar-footer .text-start,
+.layout-fullscreen .sidebar .sidebar-footer button {
+  display: none !important;
+}
+
+.layout-fullscreen .sidebar .sidebar-footer {
+  padding: 12px 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.layout-fullscreen .sidebar .sidebar-footer .avatar {
+  margin-right: 0 !important;
+}
+
+.layout-fullscreen .sidebar .brand-header {
+  justify-content: center !important;
+}
+
+.layout-fullscreen .sidebar .nav-link {
+  justify-content: center !important;
+  padding: 12px 0 !important;
+  margin: 8px 10px !important;
+}
+
+.layout-fullscreen .sidebar .nav-link i {
+  margin-right: 0 !important;
+  font-size: 1.35rem !important;
+}
+
+.layout-fullscreen .main-content {
+  margin-left: 70px !important;
+}
+
+.layout-fullscreen .custom-navbar {
+  left: 70px !important;
+}
+
+.layout-fullscreen .price-ticker-bar {
+  left: 70px !important;
 }

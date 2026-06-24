@@ -9,6 +9,7 @@
   background-color: var(--sidebar-bg) !important; /* Matches --sidebar-bg variable */
   z-index: 1020;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
+  transition: width 0.3s ease;
 }
 
 .brand-header {
@@ -58,4 +59,30 @@
   .sidebar.show {
     transform: translateX(0);
   }
+}
+
+/* Logo Link customization */
+.sidebar .logo-link {
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.25s ease;
+}
+
+.sidebar .logo-link:hover {
+  opacity: 0.85;
+}
+
+/* Fullscreen collapsed sidebar brand header styles */
+.layout-fullscreen .sidebar .brand-header {
+  padding: 0 !important;
+}
+
+.layout-fullscreen .sidebar .logo-link {
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.layout-fullscreen .sidebar .logo-icon {
+  margin-right: 0 !important;
 }

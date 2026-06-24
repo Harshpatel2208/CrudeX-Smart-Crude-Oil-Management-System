@@ -50,7 +50,7 @@ const Login = () => {
           <div className="d-inline-flex p-3 bg-warning bg-opacity-10 rounded-circle mb-3">
             <i className="bi bi-droplet-fill text-warning fs-1"></i>
           </div>
-          <h2 className="fw-bold text-white">CrudeOil CRM</h2>
+          <h2 className="fw-bold text-white">Crude-X</h2>
           <p className="text-muted">Enter credentials to access the system</p>
         </div>
 

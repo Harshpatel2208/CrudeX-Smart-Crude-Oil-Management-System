@@ -25,3 +25,86 @@
     border: none !important;
   }
 }
+
+/* Printable Invoice Styles to ensure high-contrast dark text on white background */
+.invoice-print-container {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.invoice-print-container h1,
+.invoice-print-container h2,
+.invoice-print-container h3,
+.invoice-print-container h4,
+.invoice-print-container h5,
+.invoice-print-container h6,
+.invoice-print-container div,
+.invoice-print-container span,
+.invoice-print-container td,
+.invoice-print-container th,
+.invoice-print-container p,
+.invoice-print-container strong {
+  color: #0f172a !important;
+}
+
+/* Maintain primary/accent colors */
+.invoice-print-container .text-primary,
+.invoice-print-container h2.text-primary,
+.invoice-print-container span.text-primary {
+  color: #0284c7 !important;
+}
+
+.invoice-print-container .text-warning,
+.invoice-print-container i.text-warning {
+  color: #f3a808 !important;
+}
+
+/* Table light mode styling for print/preview */
+.invoice-print-container .table {
+  --bs-table-bg: #ffffff !important;
+  --bs-table-color: #0f172a !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.invoice-print-container .table th {
+  --bs-table-bg: #f1f5f9 !important;
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+}
+
+.invoice-print-container .table td {
+  --bs-table-bg: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+.invoice-print-container .table code {
+  color: #0284c7 !important;
+  background-color: #f0f9ff !important;
+  border: 1px solid #bae6fd !important;
+}
+
+/* Badges styling in invoice */
+.invoice-print-container .badge {
+  font-weight: 700 !important;
+}
+.invoice-print-container .badge.bg-success {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+}
+.invoice-print-container .badge.bg-warning {
+  background-color: #f3a808 !important;
+  color: #080b13 !important;
+}
+.invoice-print-container .badge.bg-danger-subtle {
+  background-color: #fee2e2 !important;
+  color: #b91c1c !important;
+}
+.invoice-print-container .badge.bg-light {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}

@@ -47,3 +47,23 @@
   from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Navbar logo styling */
+.navbar-brand-logo {
+  display: flex !important;
+  transition: opacity 0.25s ease;
+}
+
+.navbar-brand-logo:hover {
+  opacity: 0.85;
+}
+
+@media (min-width: 992px) {
+  .navbar-brand-logo {
+    display: none !important;
+  }
+  
+  .layout-fullscreen .navbar-brand-logo {
+    display: flex !important;
+  }
+}

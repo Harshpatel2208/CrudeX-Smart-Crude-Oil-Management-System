@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script type="text/javascript">
+      if (localStorage.getItem('crm_lang') && localStorage.getItem('crm_lang') !== 'en') {
+        document.documentElement.classList.add('translation-loading');
+      }
+    </script>
     <title>Crude Oil Management CRM</title>
     <!-- Modern Premium Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +18,16 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="google_translate_element" style="display:none"></div>
+    <script type="text/javascript">
+      window.googleTranslateElementInit = function() {
+        new google.translate.TranslateElement({
+          pageLanguage: 'en',
+          autoDisplay: false
+        }, 'google_translate_element');
+      }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

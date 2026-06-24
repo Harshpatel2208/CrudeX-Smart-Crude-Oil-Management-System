@@ -421,7 +421,7 @@ const Orders = () => {
                     </div>
                   ))}
 
-                  <div className="text-end mt-4 p-3 bg-light rounded-3">
+                  <div className="text-end mt-4 p-3 rounded-3" style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
                     <span className="fw-bold text-secondary me-2">Grand Total Amount:</span>
                     <span className="fw-bold text-primary fs-4">₹{calculateFormTotal().toLocaleString()}</span>
                   </div>

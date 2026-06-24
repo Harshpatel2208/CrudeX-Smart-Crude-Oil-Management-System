@@ -80,7 +80,7 @@ const ActivityLogs = () => {
                       </td>
                       <td className="fw-bold text-dark">{log.user_name}</td>
                       <td>
-                        <span className="badge bg-light text-secondary border">{log.user_role}</span>
+                        <span className="badge bg-light text-dark border">{log.user_role}</span>
                       </td>
                       <td>
                         <span className={`badge ${getActionBadgeColor(log.action)}`}>
@@ -90,7 +90,7 @@ const ActivityLogs = () => {
                       <td className="fw-semibold">{log.module}</td>
                       <td>
                         {log.record_id ? (
-                          <span className="badge bg-secondary-subtle text-secondary">ID: {log.record_id}</span>
+                          <span className="badge bg-secondary-subtle text-dark">ID: {log.record_id}</span>
                         ) : (
                           <span className="text-muted">-</span>
                         )}

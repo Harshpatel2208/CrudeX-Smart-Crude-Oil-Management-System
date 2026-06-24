@@ -1,9 +1,9 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Sidebar.css';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, isFullscreen }) => {
   const { user, logout } = useAuth();
 
   const getInitials = (name) => {
@@ -19,10 +19,10 @@ const Sidebar = ({ isOpen, onClose }) => {
     <div className={`sidebar bg-gradient-blue text-white shadow ${isOpen ? 'show' : ''}`}>
       {/* Brand Logo Header */}
       <div className="brand-header d-flex align-items-center justify-content-between p-3 border-bottom border-light border-opacity-10">
-        <div className="d-flex align-items-center">
-          <i className="bi bi-droplet-fill text-warning fs-3 me-2"></i>
-          <h3 className="brand-text m-0 fw-bold tracking-wide text-white" style={{ fontSize: '1.2rem' }}>CrudeOil CRM</h3>
-        </div>
+        <Link to="/" className="logo-link d-flex align-items-center text-decoration-none w-100 h-100">
+          <i className="bi bi-droplet-fill text-warning fs-3 logo-icon me-2"></i>
+          <h3 className="brand-text m-0 fw-bold tracking-wide text-white" style={{ fontSize: '1.2rem' }}>Crude-X</h3>
+        </Link>
         {/* Mobile Close Button */}
         <button 
           onClick={onClose} 

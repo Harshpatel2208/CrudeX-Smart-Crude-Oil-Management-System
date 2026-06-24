@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 
 const Contracts = () => {
+  const { user } = useAuth();
   const [contracts, setContracts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +21,7 @@ const Contracts = () => {
     status: 'Draft'
   });
 
-  const statuses = ['Draft', 'Active', 'Expired', 'Cancelled'];
+  const statuses = ['Draft', 'Pending Approval', 'Active', 'Expired', 'Cancelled'];
 
   const fetchDropdowns = async () => {
     try {
@@ -60,7 +62,7 @@ const Contracts = () => {
     setEditId(null);
     setFormData({
       customer_id: customers[0]?.customer_id || '',
-      contract_number: '',
+      contract_number: `CON-CRUDE-${Date.now().toString().slice(-4)}`,
       contract_value: '',
       start_date: new Date().toISOString().split('T')[0],
       end_date: '',
@@ -86,11 +88,11 @@ const Contracts = () => {
     e.preventDefault();
     try {
       if (editId) {
-        await api.put(`/contracts/${editId}`, formData);
-        Swal.fire('Updated!', 'Agreement details updated.', 'success');
+        const res = await api.put(`/contracts/${editId}`, formData);
+        Swal.fire('Updated!', res.data.message || 'Agreement details updated.', 'success');
       } else {
-        await api.post('/contracts', formData);
-        Swal.fire('Created!', 'Agreement logged successfully.', 'success');
+        const res = await api.post('/contracts', formData);
+        Swal.fire('Created!', res.data.message || 'Agreement logged successfully.', 'success');
       }
       setShowModal(false);
       fetchContracts();
@@ -106,7 +108,7 @@ const Contracts = () => {
       text: "This will remove the agreement from the database.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
+      confirmButtonColor: '#ffc107',
       cancelButtonColor: '#d33',
       confirmButtonText: 'Yes, delete it!'
     }).then(async (result) => {
@@ -123,26 +125,43 @@ const Contracts = () => {
     });
   };
 
+  const handleApprove = async (id) => {
+    try {
+      await api.put(`/contracts/${id}/approve`);
+      Swal.fire('Approved!', 'Contract is now active.', 'success');
+      fetchContracts();
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', err.response?.data?.message || 'Approval failed.', 'error');
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'Active': return 'bg-success-subtle text-success';
-      case 'Draft': return 'bg-primary-subtle text-primary';
-      case 'Expired': return 'bg-danger-subtle text-danger';
-      case 'Cancelled': return 'bg-secondary-subtle text-secondary';
+      case 'Active': return 'bg-success text-white';
+      case 'Pending Approval': return 'bg-warning text-dark';
+      case 'Draft': return 'bg-primary text-white';
+      case 'Expired': return 'bg-danger text-white';
+      case 'Cancelled': return 'bg-secondary text-white';
       default: return 'bg-light text-dark';
     }
   };
+
+  const isClient = user?.role === 'Client';
+  const canApprove = ['SuperAdmin', 'CompanyAdmin', 'Manager'].includes(user?.role);
 
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="fw-bold text-dark mb-0">Agreements & Contracts</h2>
-          <p className="text-muted text-sm">Register customer supply contracts, active status codes, and values</p>
+          <p className="text-muted text-sm">Register customer supply contracts, active status codes, and threshold approvals</p>
         </div>
-        <button className="btn btn-primary" onClick={handleOpenAdd}>
-          <i className="bi bi-plus-lg me-1"></i> New Contract
-        </button>
+        {!isClient && (
+          <button className="btn btn-warning fw-bold text-dark" onClick={handleOpenAdd}>
+            <i className="bi bi-plus-lg me-1"></i> New Contract
+          </button>
+        )}
       </div>
 
       {/* Contract Listing */}
@@ -156,20 +175,21 @@ const Contracts = () => {
                   <th>Customer</th>
                   <th>Contract Value (₹)</th>
                   <th>Term Period</th>
+                  <th>Approved By</th>
                   <th>Status</th>
-                  <th className="text-end">Actions</th>
+                  {!isClient && <th className="text-end">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-4">
-                      <div className="spinner-border text-primary" role="status"></div>
+                    <td colSpan="7" className="text-center py-4">
+                      <div className="spinner-border text-warning" role="status"></div>
                     </td>
                   </tr>
                 ) : contracts.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-4 text-muted">No contracts filed.</td>
+                    <td colSpan="7" className="text-center py-4 text-muted">No contracts filed.</td>
                   </tr>
                 ) : (
                   contracts.map(c => (
@@ -186,18 +206,34 @@ const Contracts = () => {
                         </small>
                       </td>
                       <td>
+                        {c.approved_by_name ? (
+                          <span className="text-xs text-secondary d-flex align-items-center gap-1">
+                            <i className="bi bi-check-circle-fill text-success"></i> {c.approved_by_name}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted">n/a</span>
+                        )}
+                      </td>
+                      <td>
                         <span className={`badge ${getStatusBadge(c.status)}`}>
                           {c.status}
                         </span>
                       </td>
-                      <td className="text-end">
-                        <button className="btn btn-sm btn-outline-primary me-2" onClick={() => handleOpenEdit(c)}>
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(c.contract_id)}>
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
+                      {!isClient && (
+                        <td className="text-end">
+                          {canApprove && c.status === 'Pending Approval' && (
+                            <button className="btn btn-sm btn-success fw-bold text-white me-2" onClick={() => handleApprove(c.contract_id)}>
+                              <i className="bi bi-check-lg"></i> Approve
+                            </button>
+                          )}
+                          <button className="btn btn-sm btn-outline-primary me-2" onClick={() => handleOpenEdit(c)}>
+                            <i className="bi bi-pencil"></i>
+                          </button>
+                          <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(c.contract_id)}>
+                            <i className="bi bi-trash"></i>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -212,9 +248,9 @@ const Contracts = () => {
         <div className="modal show d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
           <div className="modal-dialog modal-md modal-dialog-centered">
             <div className="modal-content border-0 rounded-4 shadow-lg">
-              <div className="modal-header bg-primary text-white rounded-top-4">
+              <div className="modal-header bg-warning text-dark rounded-top-4">
                 <h5 className="modal-title fw-bold">{editId ? '📝 Edit Contract details' : '➕ Add Contract Agreement'}</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
+                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
               </div>
               <form onSubmit={handleFormSubmit}>
                 <div className="modal-body p-4">
@@ -252,7 +288,7 @@ const Contracts = () => {
                 </div>
                 <div className="modal-footer p-3 bg-light rounded-bottom-4">
                   <button type="button" className="btn btn-outline-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary px-4">Save Contract</button>
+                  <button type="submit" className="btn btn-warning fw-bold text-dark px-4">Save Contract</button>
                 </div>
               </form>
             </div>

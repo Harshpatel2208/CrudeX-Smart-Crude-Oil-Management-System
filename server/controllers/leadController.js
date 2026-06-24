@@ -14,6 +14,15 @@ const getLeads = async (req, res) => {
     `;
     const params = [];
 
+    // Tenant / Client Isolation
+    if (req.user.role === 'Client') {
+      query += ' AND l.customer_id = ?';
+      params.push(req.user.customerId);
+    } else if (req.user.role !== 'SuperAdmin') {
+      query += ' AND l.tenant_id = ?';
+      params.push(req.user.tenantId);
+    }
+
     if (status) {
       query += ' AND l.status = ?';
       params.push(status);
@@ -40,21 +49,35 @@ const getLeads = async (req, res) => {
 const createLead = async (req, res) => {
   const { customer_id, title, source, status, assigned_to, remarks } = req.body;
 
+  if (req.user.role === 'Client') {
+    return res.status(403).json({ message: 'Clients cannot create leads.' });
+  }
+
   if (!customer_id || !title || !source || !assigned_to) {
     return res.status(400).json({ message: 'Customer, Title, Source, and Assigned User are required.' });
   }
 
   try {
     const leadStatus = status || 'New';
+    const tenantId = req.user.role === 'SuperAdmin' ? (req.body.tenantId || 1) : req.user.tenantId;
+
+    // Verify customer belongs to same tenant
+    if (req.user.role !== 'SuperAdmin') {
+      const [check] = await db.query('SELECT tenant_id FROM customers WHERE customer_id = ?', [customer_id]);
+      if (check.length === 0 || check[0].tenant_id !== tenantId) {
+        return res.status(400).json({ message: 'Invalid customer selection.' });
+      }
+    }
+
     const [result] = await db.query(
-      `INSERT INTO leads (customer_id, title, source, status, assigned_to, remarks) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [customer_id, title, source, leadStatus, assigned_to, remarks || null]
+      `INSERT INTO leads (customer_id, title, source, status, assigned_to, remarks, tenant_id) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [customer_id, title, source, leadStatus, assigned_to, remarks || null, tenantId]
     );
 
     const newLeadId = result.insertId;
 
-    await logActivity(req.user.userId, 'Add', 'Leads', newLeadId);
+    await logActivity(req.user.userId, 'Add', 'Leads', newLeadId, tenantId);
 
     return res.status(201).json({
       message: 'Lead created successfully.',
@@ -70,23 +93,34 @@ const updateLead = async (req, res) => {
   const { id } = req.params;
   const { customer_id, title, source, status, assigned_to, remarks } = req.body;
 
+  if (req.user.role === 'Client') {
+    return res.status(403).json({ message: 'Clients cannot modify leads.' });
+  }
+
   if (!customer_id || !title || !source || !assigned_to) {
     return res.status(400).json({ message: 'Customer, Title, Source, and Assigned User are required.' });
   }
 
   try {
-    const [result] = await db.query(
-      `UPDATE leads 
-       SET customer_id = ?, title = ?, source = ?, status = ?, assigned_to = ?, remarks = ?
-       WHERE lead_id = ?`,
-      [customer_id, title, source, status, assigned_to, remarks || null, id]
-    );
+    let query = `
+      UPDATE leads 
+      SET customer_id = ?, title = ?, source = ?, status = ?, assigned_to = ?, remarks = ?
+      WHERE lead_id = ?
+    `;
+    const params = [customer_id, title, source, status, assigned_to, remarks || null, id];
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Lead not found.' });
+    if (req.user.role !== 'SuperAdmin') {
+      query += ' AND tenant_id = ?';
+      params.push(req.user.tenantId);
     }
 
-    await logActivity(req.user.userId, 'Update', 'Leads', id);
+    const [result] = await db.query(query, params);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Lead not found or access denied.' });
+    }
+
+    await logActivity(req.user.userId, 'Update', 'Leads', id, req.user.tenantId || 1);
 
     return res.json({ message: 'Lead updated successfully.' });
   } catch (error) {
@@ -98,13 +132,25 @@ const updateLead = async (req, res) => {
 const deleteLead = async (req, res) => {
   const { id } = req.params;
 
+  if (req.user.role === 'Client') {
+    return res.status(403).json({ message: 'Clients cannot delete leads.' });
+  }
+
   try {
-    const [result] = await db.query('DELETE FROM leads WHERE lead_id = ?', [id]);
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Lead not found.' });
+    let query = 'DELETE FROM leads WHERE lead_id = ?';
+    const params = [id];
+
+    if (req.user.role !== 'SuperAdmin') {
+      query += ' AND tenant_id = ?';
+      params.push(req.user.tenantId);
     }
 
-    await logActivity(req.user.userId, 'Delete', 'Leads', id);
+    const [result] = await db.query(query, params);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Lead not found or access denied.' });
+    }
+
+    await logActivity(req.user.userId, 'Delete', 'Leads', id, req.user.tenantId || 1);
 
     return res.json({ message: 'Lead deleted successfully.' });
   } catch (error) {

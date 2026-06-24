@@ -1,7 +1,6 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { logActivity } = require('../middleware/logMiddleware');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'crude_oil_crm_secret_key_2026_super_secure';
@@ -31,13 +30,23 @@ const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.user_id, name: user.name, email: user.email, role: user.role },
+      { 
+        userId: user.user_id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role,
+        tenantId: user.tenant_id,
+        customerId: user.customer_id
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     // Record login activity
-    await logActivity(user.user_id, 'Login', 'Auth', user.user_id);
+    await db.query(
+      'INSERT INTO activity_logs (user_id, action, module, record_id, tenant_id) VALUES (?, ?, ?, ?, ?)',
+      [user.user_id, 'Login', 'Auth', user.user_id, user.tenant_id || 1]
+    );
 
     return res.json({
       token,
@@ -45,7 +54,9 @@ const login = async (req, res) => {
         userId: user.user_id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        tenantId: user.tenant_id,
+        customerId: user.customer_id
       }
     });
   } catch (error) {
@@ -55,7 +66,7 @@ const login = async (req, res) => {
 };
 
 const register = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, companyName, tenantId, customerId } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: 'Name, email, and password are required.' });
@@ -68,22 +79,50 @@ const register = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userRole = role || 'Employee';
+    let resolvedTenantId = null;
+    let resolvedRole = role || 'Employee';
+
+    // 1. Tenant Self-Signup Flow
+    if (companyName) {
+      const [tenantResult] = await db.query(
+        'INSERT INTO tenants (company_name, owner_email, status) VALUES (?, ?, ?)',
+        [companyName, email, 'Active']
+      );
+      resolvedTenantId = tenantResult.insertId;
+      resolvedRole = 'CompanyAdmin';
+    } 
+    // 2. Normal team user creation
+    else {
+      if (req.user) {
+        if (req.user.role === 'SuperAdmin') {
+          resolvedTenantId = tenantId || null;
+        } else {
+          resolvedTenantId = req.user.tenantId;
+        }
+      } else {
+        // Fallback for demo seeds
+        resolvedTenantId = 1;
+      }
+    }
 
     const [result] = await db.query(
-      'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      [name, email, hashedPassword, userRole]
+      'INSERT INTO users (name, email, password, role, tenant_id, customer_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, email, hashedPassword, resolvedRole, resolvedTenantId, customerId || null]
     );
 
     const newUserId = result.insertId;
 
-    // Log the registration if there is an authenticated user performing it, or if it is the first/public register
+    // Log registration
     const activeUserId = req.user ? req.user.userId : newUserId;
-    await logActivity(activeUserId, 'Add', 'Users', newUserId);
+    await db.query(
+      'INSERT INTO activity_logs (user_id, action, module, record_id, tenant_id) VALUES (?, ?, ?, ?, ?)',
+      [activeUserId, 'Add', 'Users', newUserId, resolvedTenantId || 1]
+    );
 
     return res.status(201).json({
       message: 'User registered successfully.',
-      userId: newUserId
+      userId: newUserId,
+      tenantId: resolvedTenantId
     });
   } catch (error) {
     console.error(error);
@@ -93,7 +132,10 @@ const register = async (req, res) => {
 
 const profile = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT user_id, name, email, role, status, created_at FROM users WHERE user_id = ?', [req.user.userId]);
+    const [rows] = await db.query(
+      'SELECT user_id, name, email, role, tenant_id, customer_id, status, created_at FROM users WHERE user_id = ?', 
+      [req.user.userId]
+    );
     if (rows.length === 0) {
       return res.status(404).json({ message: 'User not found.' });
     }
@@ -106,7 +148,16 @@ const profile = async (req, res) => {
 
 const getUsers = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT user_id, name, email, role, status FROM users WHERE status = 1 ORDER BY name ASC');
+    let query = 'SELECT user_id, name, email, role, tenant_id, status FROM users WHERE status = 1';
+    const params = [];
+
+    if (req.user.role !== 'SuperAdmin') {
+      query += ' AND tenant_id = ?';
+      params.push(req.user.tenantId);
+    }
+
+    query += ' ORDER BY name ASC';
+    const [rows] = await db.query(query, params);
     return res.json(rows);
   } catch (error) {
     console.error(error);
@@ -116,7 +167,16 @@ const getUsers = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT user_id, name, email, role, status, created_at FROM users ORDER BY name ASC');
+    let query = 'SELECT user_id, name, email, role, tenant_id, status, created_at FROM users';
+    const params = [];
+
+    if (req.user.role !== 'SuperAdmin') {
+      query += ' WHERE tenant_id = ?';
+      params.push(req.user.tenantId);
+    }
+
+    query += ' ORDER BY name ASC';
+    const [rows] = await db.query(query, params);
     return res.json(rows);
   } catch (error) {
     console.error(error);
@@ -133,6 +193,14 @@ const updateUser = async (req, res) => {
   }
 
   try {
+    // Verify user ownership/tenant matching
+    if (req.user.role !== 'SuperAdmin') {
+      const [check] = await db.query('SELECT tenant_id FROM users WHERE user_id = ?', [id]);
+      if (check.length === 0 || check[0].tenant_id !== req.user.tenantId) {
+        return res.status(403).json({ message: 'Access denied. User belongs to another tenant.' });
+      }
+    }
+
     const [result] = await db.query(
       'UPDATE users SET name = ?, email = ?, role = ?, status = ? WHERE user_id = ?',
       [name, email, role, status !== undefined ? status : 1, id]
@@ -142,7 +210,10 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    await logActivity(req.user.userId, 'Update', 'Users', id);
+    await db.query(
+      'INSERT INTO activity_logs (user_id, action, module, record_id, tenant_id) VALUES (?, ?, ?, ?, ?)',
+      [req.user.userId, 'Update', 'Users', id, req.user.tenantId || 1]
+    );
 
     return res.json({ message: 'User updated successfully.' });
   } catch (error) {
@@ -159,12 +230,23 @@ const deleteUser = async (req, res) => {
       return res.status(400).json({ message: 'You cannot delete your own account.' });
     }
 
+    // Verify user ownership/tenant matching
+    if (req.user.role !== 'SuperAdmin') {
+      const [check] = await db.query('SELECT tenant_id FROM users WHERE user_id = ?', [id]);
+      if (check.length === 0 || check[0].tenant_id !== req.user.tenantId) {
+        return res.status(403).json({ message: 'Access denied. User belongs to another tenant.' });
+      }
+    }
+
     const [result] = await db.query('DELETE FROM users WHERE user_id = ?', [id]);
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    await logActivity(req.user.userId, 'Delete', 'Users', id);
+    await db.query(
+      'INSERT INTO activity_logs (user_id, action, module, record_id, tenant_id) VALUES (?, ?, ?, ?, ?)',
+      [req.user.userId, 'Delete', 'Users', id, req.user.tenantId || 1]
+    );
 
     return res.json({ message: 'User deleted successfully.' });
   } catch (error) {

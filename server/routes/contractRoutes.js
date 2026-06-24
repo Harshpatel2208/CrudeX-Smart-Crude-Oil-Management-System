@@ -5,6 +5,8 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 
 router.use(authenticateToken);
 
+router.put('/:id/approve', contractController.approveContract);
+
 router.get('/', contractController.getContracts);
 router.post('/', contractController.createContract);
 router.put('/:id', contractController.updateContract);

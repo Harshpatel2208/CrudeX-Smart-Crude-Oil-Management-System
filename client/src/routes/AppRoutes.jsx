@@ -25,7 +25,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <div className="spinner-border text-primary" role="status">
+        <div className="spinner-border text-warning" role="status">
           <span className="visually-hidden">Loading...</span>
         </div>
       </div>
@@ -62,8 +62,25 @@ const AppRoutes = () => {
           >
             <Route index element={<Dashboard />} />
             <Route path="customers" element={<Customers />} />
-            <Route path="leads" element={<Leads />} />
-            <Route path="opportunities" element={<Opportunities />} />
+            
+            {/* Sales pipeline features restricted for Clients */}
+            <Route 
+              path="leads" 
+              element={
+                <ProtectedRoute allowedRoles={['SuperAdmin', 'CompanyAdmin', 'Manager', 'Employee']}>
+                  <Leads />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="opportunities" 
+              element={
+                <ProtectedRoute allowedRoles={['SuperAdmin', 'CompanyAdmin', 'Manager', 'Employee']}>
+                  <Opportunities />
+                </ProtectedRoute>
+              } 
+            />
+            
             <Route path="products" element={<Products />} />
             <Route path="contracts" element={<Contracts />} />
             <Route path="orders" element={<Orders />} />
@@ -71,19 +88,21 @@ const AppRoutes = () => {
             <Route path="invoices" element={<Invoices />} />
             <Route path="payments" element={<Payments />} />
             
-            {/* Admin/Manager/Employee permissions */}
+            {/* Admin/Manager/Employee permissions for Activity Logs */}
             <Route
               path="activity-logs"
               element={
-                <ProtectedRoute allowedRoles={['Admin', 'Manager', 'Employee']}>
+                <ProtectedRoute allowedRoles={['SuperAdmin', 'CompanyAdmin', 'Manager', 'Employee']}>
                   <ActivityLogs />
                 </ProtectedRoute>
               }
             />
+            
+            {/* Team settings only for Admins */}
             <Route
               path="team"
               element={
-                <ProtectedRoute allowedRoles={['Admin']}>
+                <ProtectedRoute allowedRoles={['SuperAdmin', 'CompanyAdmin']}>
                   <Team />
                 </ProtectedRoute>
               }

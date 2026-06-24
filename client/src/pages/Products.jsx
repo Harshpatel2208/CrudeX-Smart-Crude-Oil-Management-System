@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
+  const [benchmarks, setBenchmarks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Form states
@@ -14,6 +15,8 @@ const Products = () => {
     product_code: '',
     category: 'Crude Oil',
     unit_price: 0,
+    linked_benchmark_id: '',
+    margin_offset: 0,
     stock_quantity: 0,
     description: '',
     status: 1
@@ -22,11 +25,15 @@ const Products = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/products');
-      setProducts(res.data);
+      const [prodRes, benchRes] = await Promise.all([
+        api.get('/products'),
+        api.get('/products/benchmarks')
+      ]);
+      setProducts(prodRes.data);
+      setBenchmarks(benchRes.data);
     } catch (err) {
       console.error(err);
-      Swal.fire('Error', 'Failed to retrieve products.', 'error');
+      Swal.fire('Error', 'Failed to retrieve products details.', 'error');
     } finally {
       setLoading(false);
     }
@@ -40,7 +47,9 @@ const Products = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: (name === 'unit_price' || name === 'stock_quantity' || name === 'status') ? Number(value) : value
+      [name]: (name === 'unit_price' || name === 'stock_quantity' || name === 'status' || name === 'margin_offset') 
+        ? Number(value) 
+        : value
     });
   };
 
@@ -51,6 +60,8 @@ const Products = () => {
       product_code: '',
       category: 'Crude Oil',
       unit_price: '',
+      linked_benchmark_id: '',
+      margin_offset: 0,
       stock_quantity: '',
       description: '',
       status: 1
@@ -65,6 +76,8 @@ const Products = () => {
       product_code: product.product_code,
       category: product.category,
       unit_price: product.unit_price,
+      linked_benchmark_id: product.linked_benchmark_id || '',
+      margin_offset: product.margin_offset || 0,
       stock_quantity: product.stock_quantity,
       description: product.description || '',
       status: product.status
@@ -75,11 +88,17 @@ const Products = () => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Clean up linked benchmark
+      const submitData = {
+        ...formData,
+        linked_benchmark_id: formData.linked_benchmark_id === '' ? null : Number(formData.linked_benchmark_id)
+      };
+
       if (editId) {
-        await api.put(`/products/${editId}`, formData);
+        await api.put(`/products/${editId}`, submitData);
         Swal.fire('Updated!', 'Product details updated.', 'success');
       } else {
-        await api.post('/products', formData);
+        await api.post('/products', submitData);
         Swal.fire('Created!', 'Product created successfully.', 'success');
       }
       setShowModal(false);
@@ -96,7 +115,7 @@ const Products = () => {
       text: "This will remove the product and all associated logs.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
+      confirmButtonColor: '#ffc107',
       cancelButtonColor: '#d33',
       confirmButtonText: 'Yes, delete it!'
     }).then(async (result) => {
@@ -120,8 +139,8 @@ const Products = () => {
           <h2 className="fw-bold text-dark mb-0">Crude Oil Products</h2>
           <p className="text-muted text-sm">Monitor oil grade lists, contract prices, and real-time inventory tracking</p>
         </div>
-        <button className="btn btn-primary" onClick={handleOpenAdd}>
-          <i className="bi bi-plus-lg me-1"></i> Add Product
+        <button className="btn btn-warning fw-bold text-dark" onClick={handleOpenAdd}>
+          <i className="bi bi-plus-lg me-1"></i> Add Crude Grade
         </button>
       </div>
 
@@ -145,7 +164,8 @@ const Products = () => {
                   <th>Product Name</th>
                   <th>Code</th>
                   <th>Category</th>
-                  <th>Unit Price (₹)</th>
+                  <th>Pricing Model</th>
+                  <th>Selling Price (₹)</th>
                   <th>Stock Quantity</th>
                   <th>Status</th>
                   <th className="text-end">Actions</th>
@@ -154,13 +174,13 @@ const Products = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-4">
-                      <div className="spinner-border text-primary" role="status"></div>
+                    <td colSpan="8" className="text-center py-4">
+                      <div className="spinner-border text-warning" role="status"></div>
                     </td>
                   </tr>
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-4 text-muted">No products configured.</td>
+                    <td colSpan="8" className="text-center py-4 text-muted">No products configured.</td>
                   </tr>
                 ) : (
                   products.map(p => (
@@ -171,11 +191,29 @@ const Products = () => {
                       </td>
                       <td><code>{p.product_code}</code></td>
                       <td>{p.category}</td>
-                      <td className="fw-semibold">₹{Number(p.unit_price).toLocaleString()}</td>
+                      <td>
+                        {p.linked_benchmark_id ? (
+                          <span className="badge bg-primary-subtle text-primary fw-medium">
+                            Linked: {p.benchmark_name}
+                          </span>
+                        ) : (
+                          <span className="badge bg-secondary-subtle text-secondary fw-medium">
+                            Fixed Pricing
+                          </span>
+                        )}
+                      </td>
+                      <td className="fw-semibold">
+                        ₹{Number(p.effective_price || p.unit_price).toLocaleString()}
+                        {p.linked_benchmark_id && (
+                          <div className="text-xs text-muted fw-normal" style={{ fontSize: '0.75rem' }}>
+                            (Index: ₹{Number(p.benchmark_price).toLocaleString()} + Offset: ₹{Number(p.margin_offset).toLocaleString()})
+                          </div>
+                        )}
+                      </td>
                       <td>
                         <div className="d-flex align-items-center gap-2">
                           <span className={`fw-bold ${p.low_stock ? 'text-danger' : 'text-success'}`}>
-                            {Number(p.stock_quantity).toLocaleString()} units
+                            {Number(p.stock_quantity).toLocaleString()} Bbl
                           </span>
                           {p.low_stock && (
                             <span className="badge bg-danger rounded-pill py-1 text-xs">Low Stock</span>
@@ -209,9 +247,9 @@ const Products = () => {
         <div className="modal show d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
           <div className="modal-dialog modal-md modal-dialog-centered">
             <div className="modal-content border-0 rounded-4 shadow-lg">
-              <div className="modal-header bg-primary text-white rounded-top-4">
+              <div className="modal-header bg-warning text-dark rounded-top-4">
                 <h5 className="modal-title fw-bold">{editId ? '📝 Edit Product Info' : '➕ Add Product'}</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
+                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
               </div>
               <form onSubmit={handleFormSubmit}>
                 <div className="modal-body p-4">
@@ -229,9 +267,35 @@ const Products = () => {
                       <input type="text" className="form-control" name="category" value={formData.category} onChange={handleInputChange} required />
                     </div>
                     <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold">Unit Price (₹)</label>
+                      <label className="form-label fw-semibold">Base Fixed Price (₹)</label>
                       <input type="number" className="form-control" name="unit_price" value={formData.unit_price} onChange={handleInputChange} required />
                     </div>
+
+                    {/* Benchmark linkage fields */}
+                    <div className="col-12 col-md-6">
+                      <label className="form-label fw-semibold">Link to Oil Benchmark Index</label>
+                      <select className="form-select" name="linked_benchmark_id" value={formData.linked_benchmark_id} onChange={handleInputChange}>
+                        <option value="">No Link (Fixed Pricing Only)</option>
+                        {benchmarks.map(b => (
+                          <option key={b.benchmark_id} value={b.benchmark_id}>
+                            {b.name} (Current: ₹{Number(b.current_price).toLocaleString()})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-12 col-md-6">
+                      <label className="form-label fw-semibold">Margin Offset / markup (₹)</label>
+                      <input 
+                        type="number" 
+                        className="form-control" 
+                        name="margin_offset" 
+                        value={formData.margin_offset} 
+                        onChange={handleInputChange}
+                        placeholder="e.g. 250"
+                        disabled={formData.linked_benchmark_id === ''} 
+                      />
+                    </div>
+
                     <div className="col-12 col-md-6">
                       <label className="form-label fw-semibold">Stock Quantity (Barrels/Units)</label>
                       <input type="number" className="form-control" name="stock_quantity" value={formData.stock_quantity} onChange={handleInputChange} required />
@@ -251,7 +315,7 @@ const Products = () => {
                 </div>
                 <div className="modal-footer p-3 bg-light rounded-bottom-4">
                   <button type="button" className="btn btn-outline-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary px-4">Save Product</button>
+                  <button type="submit" className="btn btn-warning fw-bold text-dark px-4">Save Product</button>
                 </div>
               </form>
             </div>

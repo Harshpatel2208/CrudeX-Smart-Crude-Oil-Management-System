@@ -183,3 +183,40 @@ Use the following pre-seeded credentials to test different role permissions:
 ### Dashboard Analytics
 - `GET /api/dashboard/stats` - Total summary counts (Customers, Leads, Opps, Revenue)
 - `GET /api/dashboard/charts` - Line and bar chart data formats for monthly sales, stocks, and pipeline value
+
+---
+
+## 🚀 SaaS Multi-Tenant & Level-50 Premium Features
+
+We have upgraded the platform to a fully-isolated SaaS application supporting multiple independent companies, complete with premium oil-industry workflows:
+
+### 1. Row-Level Multi-Tenancy
+- **Shared DB, Isolated Rows:** Every record in the database contains a `tenant_id` foreign key.
+- **Self-Service Onboarding:** Users can click **"Register a New Company Workspace (SaaS)"** on the login screen to register their company (e.g. *Chevron Corp*). The system provisions their tenant space and registers the owner as `CompanyAdmin`.
+- **Complete Data Isolation:** SQL queries are dynamically filtered by the logged-in user's `tenant_id`. Users from one company cannot access or view data from another.
+
+### 2. Multi-Level Authorization & Client Portal
+The system supports the following roles:
+- `SuperAdmin` - Global platform administrator bypass.
+- `CompanyAdmin` - Owner of the tenant company. Full access to workspace details and staff management.
+- `Manager` - Access to dashboard analytics, products catalog, and can authorize pending approvals.
+- `Employee` - Day-to-day operations (customer entry, pipeline, logistics, invoices).
+- `Client` - Customer portal access. Clients can log in and view *only* their own order history, invoices, payments, and live shipping map track.
+
+### 3. Dynamic Index pricing
+- Products can be linked to standard oil indexes: **Brent Crude**, **WTI**, or **Dubai Crude**.
+- Set a **Margin Offset** value (e.g., Brent + ₹250). The unit price auto-updates when benchmark prices fluctuate.
+- Test endpoint `POST /api/products/benchmarks/fluctuate` simulates market pricing volatility.
+
+### 4. Limit-Based Approval Gates
+- Orders or Contracts exceeding **₹100,000** are automatically marked as `Pending Approval`.
+- Managers or Company Admins can review pending drafts and approve them to advance them to `Active` or `Processing` status.
+
+### 5. Simulated GIS Logistics Tracker
+- Real-time tanker location coordinates can be tracked.
+- Test endpoint `POST /api/logistics/:id/step` simulates coordinate increments (e.g. 25%, 50%, 75%, 100%) as tankers travel along standard routes.
+
+### 6. Depletion Forecasts & Credit Risk Matrix
+- **Stock Depletion Forecasts:** Predicts how many days of inventory remain before running out based on sales velocity.
+- **Outstanding Credit Risk Matrix:** Identifies customers with high outstanding invoices and prints risk levels (Low, Medium, High).
+

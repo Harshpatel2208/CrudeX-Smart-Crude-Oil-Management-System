@@ -17,7 +17,7 @@ const Team = () => {
     status: 1
   });
 
-  const roles = ['Admin', 'Manager', 'Employee'];
+  const roles = ['CompanyAdmin', 'Manager', 'Employee', 'Client'];
 
   const fetchUsers = async () => {
     try {
@@ -61,7 +61,7 @@ const Team = () => {
     setFormData({
       name: user.name,
       email: user.email,
-      password: '', // Leave blank for edit unless they change password (note: in our simple API, register sets password. Update updates name/email/role/status. So password isn't sent/required for update!)
+      password: '',
       role: user.role,
       status: user.status
     });
@@ -72,7 +72,7 @@ const Team = () => {
     e.preventDefault();
     try {
       if (editId) {
-        // Update user (name, email, role, status)
+        // Update user
         await api.put(`/auth/users/${editId}`, {
           name: formData.name,
           email: formData.email,
@@ -124,11 +124,11 @@ const Team = () => {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="fw-bold text-dark mb-0">Team Management</h2>
+          <h2 className="fw-bold text-dark mb-0">Team & Tenant Management</h2>
           <p className="text-muted text-sm">Register new staff accounts, manage roles, and review status</p>
         </div>
-        <button className="btn btn-primary" onClick={handleOpenAdd}>
-          <i className="bi bi-plus-lg me-1"></i> Add Team Member
+        <button className="btn btn-warning fw-bold text-dark" onClick={handleOpenAdd}>
+          <i className="bi bi-plus-lg me-1"></i> Add Workspace User
         </button>
       </div>
 
@@ -151,7 +151,7 @@ const Team = () => {
                 {loading ? (
                   <tr>
                     <td colSpan="6" className="text-center py-4">
-                      <div className="spinner-border text-primary" role="status"></div>
+                      <div className="spinner-border text-warning" role="status"></div>
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
@@ -165,7 +165,7 @@ const Team = () => {
                       <td><code>{u.email}</code></td>
                       <td>
                         <span className={`badge ${
-                          u.role === 'Admin' ? 'bg-danger-subtle text-danger' : u.role === 'Manager' ? 'bg-primary-subtle text-primary' : 'bg-success-subtle text-success'
+                          u.role === 'CompanyAdmin' ? 'bg-danger text-white' : u.role === 'Manager' ? 'bg-primary text-white' : u.role === 'Client' ? 'bg-info text-white' : 'bg-success text-white'
                         }`}>
                           {u.role}
                         </span>
@@ -198,9 +198,9 @@ const Team = () => {
         <div className="modal show d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
           <div className="modal-dialog modal-md modal-dialog-centered">
             <div className="modal-content border-0 rounded-4 shadow-lg">
-              <div className="modal-header bg-primary text-white rounded-top-4">
-                <h5 className="modal-title fw-bold">{editId ? '📝 Edit Member details' : '➕ Register Team Member'}</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
+              <div className="modal-header bg-warning text-dark rounded-top-4">
+                <h5 className="modal-title fw-bold">{editId ? '📝 Edit Member details' : '➕ Register Workspace User'}</h5>
+                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
               </div>
               <form onSubmit={handleFormSubmit}>
                 <div className="modal-body p-4">
@@ -239,7 +239,7 @@ const Team = () => {
                 </div>
                 <div className="modal-footer p-3 bg-light rounded-bottom-4">
                   <button type="button" className="btn btn-outline-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary px-4">{editId ? 'Save Member' : 'Register User'}</button>
+                  <button type="submit" className="btn btn-warning fw-bold text-dark px-4">{editId ? 'Save Member' : 'Register User'}</button>
                 </div>
               </form>
             </div>

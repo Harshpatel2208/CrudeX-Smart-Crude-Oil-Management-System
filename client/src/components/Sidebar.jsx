@@ -15,6 +15,9 @@ const Sidebar = ({ isOpen, onClose, isFullscreen }) => {
     return name.slice(0, 2).toUpperCase();
   };
 
+  const isClient = user?.role === 'Client';
+  const isAdmin = ['SuperAdmin', 'CompanyAdmin'].includes(user?.role);
+
   return (
     <div className={`sidebar bg-gradient-blue text-white shadow ${isOpen ? 'show' : ''}`}>
       {/* Brand Logo Header */}
@@ -43,74 +46,90 @@ const Sidebar = ({ isOpen, onClose, isFullscreen }) => {
               <span>Dashboard</span>
             </NavLink>
           </li>
-          {user?.role === 'Admin' && (
+          
+          {isAdmin && (
             <li className="nav-item">
               <NavLink to="/team" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
                 <i className="bi bi-person-badge me-3 fs-5"></i>
-                <span>Team Management</span>
+                <span>Team & SaaS Settings</span>
               </NavLink>
             </li>
           )}
+
           <li className="nav-item">
             <NavLink to="/orders" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
               <i className="bi bi-truck me-3 fs-5"></i>
-              <span>Order Tracking</span>
+              <span>Orders Log</span>
             </NavLink>
           </li>
+
           <li className="nav-item">
             <NavLink to="/customers" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
               <i className="bi bi-search me-3 fs-5"></i>
               <span>Customer Search</span>
             </NavLink>
           </li>
-          <li className="nav-item">
-            <NavLink to="/leads" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
-              <i className="bi bi-clipboard-check me-3 fs-5"></i>
-              <span>Leads List</span>
-            </NavLink>
-          </li>
-          <li className="nav-item">
-            <NavLink to="/opportunities" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
-              <i className="bi bi-graph-up me-3 fs-5"></i>
-              <span>Opportunities</span>
-            </NavLink>
-          </li>
+
+          {!isClient && (
+            <>
+              <li className="nav-item">
+                <NavLink to="/leads" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
+                  <i className="bi bi-clipboard-check me-3 fs-5"></i>
+                  <span>Leads Funnel</span>
+                </NavLink>
+              </li>
+              <li className="nav-item">
+                <NavLink to="/opportunities" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
+                  <i className="bi bi-graph-up me-3 fs-5"></i>
+                  <span>Opportunities</span>
+                </NavLink>
+              </li>
+            </>
+          )}
+
           <li className="nav-item">
             <NavLink to="/products" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
               <i className="bi bi-droplet-half me-3 fs-5"></i>
-              <span>Products</span>
+              <span>Products & Margins</span>
             </NavLink>
           </li>
+
           <li className="nav-item">
             <NavLink to="/contracts" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
               <i className="bi bi-file-earmark-text me-3 fs-5"></i>
               <span>Contracts</span>
             </NavLink>
           </li>
+
           <li className="nav-item">
             <NavLink to="/logistics" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
               <i className="bi bi-geo-alt me-3 fs-5"></i>
-              <span>Logistics</span>
+              <span>Logistics Tracker</span>
             </NavLink>
           </li>
+
           <li className="nav-item">
             <NavLink to="/invoices" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
               <i className="bi bi-receipt me-3 fs-5"></i>
               <span>Invoices</span>
             </NavLink>
           </li>
+
           <li className="nav-item">
             <NavLink to="/payments" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
               <i className="bi bi-currency-rupee me-3 fs-5"></i>
-              <span>Payments</span>
+              <span>Payments Ledger</span>
             </NavLink>
           </li>
-          <li className="nav-item">
-            <NavLink to="/activity-logs" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
-              <i className="bi bi-journal-text me-3 fs-5"></i>
-              <span>Activity Logs</span>
-            </NavLink>
-          </li>
+
+          {!isClient && (
+            <li className="nav-item">
+              <NavLink to="/activity-logs" className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}>
+                <i className="bi bi-journal-text me-3 fs-5"></i>
+                <span>Activity Logs</span>
+              </NavLink>
+            </li>
+          )}
         </ul>
       </div>
 

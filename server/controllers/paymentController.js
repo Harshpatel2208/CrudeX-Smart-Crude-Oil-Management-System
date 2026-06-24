@@ -3,13 +3,27 @@ const { logActivity } = require('../middleware/logMiddleware');
 
 const getPayments = async (req, res) => {
   try {
-    const [rows] = await db.query(`
+    let query = `
       SELECT p.*, inv.invoice_number, c.company_name as customer_name
       FROM payments p
       JOIN invoices inv ON p.invoice_id = inv.invoice_id
       JOIN customers c ON inv.customer_id = c.customer_id
-      ORDER BY p.payment_date DESC
-    `);
+      WHERE 1=1
+    `;
+    const params = [];
+
+    // Tenant / Client Isolation
+    if (req.user.role === 'Client') {
+      query += ' AND inv.customer_id = ?';
+      params.push(req.user.customerId);
+    } else if (req.user.role !== 'SuperAdmin') {
+      query += ' AND p.tenant_id = ?';
+      params.push(req.user.tenantId);
+    }
+
+    query += ' ORDER BY p.payment_date DESC';
+
+    const [rows] = await db.query(query, params);
     return res.json(rows);
   } catch (error) {
     console.error(error);
@@ -20,6 +34,15 @@ const getPayments = async (req, res) => {
 const createPayment = async (req, res) => {
   const { invoice_id, amount, payment_mode, transaction_reference, payment_date, remarks } = req.body;
 
+  if (req.user.role === 'Client') {
+    // Clients can submit proof of payment, but let's allow recording payments directly too
+    // However, verify they can only record payments for their own invoice!
+    const [invDetails] = await db.query('SELECT customer_id FROM invoices WHERE invoice_id = ?', [invoice_id]);
+    if (invDetails.length === 0 || invDetails[0].customer_id !== req.user.customerId) {
+      return res.status(403).json({ message: 'Forbidden. You can only submit payments for your own invoices.' });
+    }
+  }
+
   if (!invoice_id || amount === undefined || !payment_mode || !transaction_reference || !payment_date) {
     return res.status(400).json({ message: 'Invoice, Amount, Payment Mode, Transaction Ref, and Payment Date are required.' });
   }
@@ -28,11 +51,21 @@ const createPayment = async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    const tenantId = req.user.role === 'SuperAdmin' ? (req.body.tenantId || 1) : req.user.tenantId;
+
+    // Verify invoice belongs to tenant
+    if (req.user.role !== 'SuperAdmin' && req.user.role !== 'Client') {
+      const [checkInv] = await connection.query('SELECT tenant_id FROM invoices WHERE invoice_id = ?', [invoice_id]);
+      if (checkInv.length === 0 || checkInv[0].tenant_id !== tenantId) {
+        throw new Error('Invalid invoice selection.');
+      }
+    }
+
     // Insert payment
     const [result] = await connection.query(
-      `INSERT INTO payments (invoice_id, amount, payment_mode, transaction_reference, payment_date, remarks) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [invoice_id, amount, payment_mode, transaction_reference, payment_date, remarks || null]
+      `INSERT INTO payments (invoice_id, amount, payment_mode, transaction_reference, payment_date, remarks, tenant_id) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [invoice_id, amount, payment_mode, transaction_reference, payment_date, remarks || null, tenantId]
     );
 
     const newPaymentId = result.insertId;
@@ -42,7 +75,7 @@ const createPayment = async (req, res) => {
 
     await connection.commit();
 
-    await logActivity(req.user.userId, 'Add', 'Payments', newPaymentId);
+    await logActivity(req.user.userId, 'Add', 'Payments', newPaymentId, tenantId);
 
     return res.status(201).json({
       message: 'Payment recorded successfully.',
@@ -51,7 +84,7 @@ const createPayment = async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error(error);
-    return res.status(500).json({ message: 'Internal server error.' });
+    return res.status(500).json({ message: error.message || 'Internal server error.' });
   } finally {
     connection.release();
   }
@@ -61,6 +94,10 @@ const updatePayment = async (req, res) => {
   const { id } = req.params;
   const { invoice_id, amount, payment_mode, transaction_reference, payment_date, remarks } = req.body;
 
+  if (req.user.role === 'Client') {
+    return res.status(403).json({ message: 'Clients cannot modify payments.' });
+  }
+
   if (!invoice_id || amount === undefined || !payment_mode || !transaction_reference || !payment_date) {
     return res.status(400).json({ message: 'Invoice, Amount, Payment Mode, Transaction Ref, and Payment Date are required.' });
   }
@@ -69,7 +106,17 @@ const updatePayment = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // Get old invoice ID in case it changed
+    const tenantId = req.user.tenantId || 1;
+
+    // Verify payment matches tenant
+    if (req.user.role !== 'SuperAdmin') {
+      const [check] = await connection.query('SELECT tenant_id FROM payments WHERE payment_id = ?', [id]);
+      if (check.length === 0 || check[0].tenant_id !== tenantId) {
+        throw new Error('Payment record not found or access denied.');
+      }
+    }
+
+    // Get old invoice ID
     const [oldPayRows] = await connection.query('SELECT invoice_id FROM payments WHERE payment_id = ?', [id]);
     if (oldPayRows.length === 0) {
       throw new Error('Payment not found.');
@@ -92,7 +139,7 @@ const updatePayment = async (req, res) => {
 
     await connection.commit();
 
-    await logActivity(req.user.userId, 'Update', 'Payments', id);
+    await logActivity(req.user.userId, 'Update', 'Payments', id, req.user.tenantId || 1);
 
     return res.json({ message: 'Payment updated successfully.' });
   } catch (error) {
@@ -107,9 +154,23 @@ const updatePayment = async (req, res) => {
 const deletePayment = async (req, res) => {
   const { id } = req.params;
 
+  if (req.user.role === 'Client') {
+    return res.status(403).json({ message: 'Clients cannot delete payments.' });
+  }
+
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
+
+    const tenantId = req.user.tenantId || 1;
+
+    // Verify payment matches tenant
+    if (req.user.role !== 'SuperAdmin') {
+      const [check] = await connection.query('SELECT tenant_id FROM payments WHERE payment_id = ?', [id]);
+      if (check.length === 0 || check[0].tenant_id !== tenantId) {
+        throw new Error('Payment record not found or access denied.');
+      }
+    }
 
     // Get invoice ID
     const [payRows] = await connection.query('SELECT invoice_id FROM payments WHERE payment_id = ?', [id]);
@@ -126,7 +187,7 @@ const deletePayment = async (req, res) => {
 
     await connection.commit();
 
-    await logActivity(req.user.userId, 'Delete', 'Payments', id);
+    await logActivity(req.user.userId, 'Delete', 'Payments', id, req.user.tenantId || 1);
 
     return res.json({ message: 'Payment deleted successfully.' });
   } catch (error) {
@@ -140,7 +201,7 @@ const deletePayment = async (req, res) => {
 
 const getOutstandingReport = async (req, res) => {
   try {
-    const [rows] = await db.query(`
+    let query = `
       SELECT 
         c.customer_id,
         c.company_name,
@@ -163,9 +224,22 @@ const getOutstandingReport = async (req, res) => {
         )) as outstanding_amount
       FROM customers c
       LEFT JOIN invoices inv ON c.customer_id = inv.customer_id
-      GROUP BY c.customer_id
-      ORDER BY outstanding_amount DESC
-    `);
+      WHERE 1=1
+    `;
+    const params = [];
+
+    // Tenant / Client Isolation
+    if (req.user.role === 'Client') {
+      query += ' AND c.customer_id = ?';
+      params.push(req.user.customerId);
+    } else if (req.user.role !== 'SuperAdmin') {
+      query += ' AND c.tenant_id = ?';
+      params.push(req.user.tenantId);
+    }
+
+    query += ' GROUP BY c.customer_id ORDER BY outstanding_amount DESC';
+
+    const [rows] = await db.query(query, params);
     return res.json(rows);
   } catch (error) {
     console.error(error);
@@ -175,13 +249,11 @@ const getOutstandingReport = async (req, res) => {
 
 // Helper function to update payment status
 async function updateInvoicePaymentStatus(connection, invoiceId) {
-  // Get invoice details
   const [invRows] = await connection.query('SELECT total_amount FROM invoices WHERE invoice_id = ?', [invoiceId]);
   if (invRows.length === 0) return;
 
   const totalAmount = Number(invRows[0].total_amount);
 
-  // Get sum of payments
   const [payRows] = await connection.query('SELECT SUM(amount) as total_paid FROM payments WHERE invoice_id = ?', [invoiceId]);
   const totalPaid = Number(payRows[0].total_paid || 0);
 

@@ -5,6 +5,8 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 
 router.use(authenticateToken);
 
+router.put('/:id/approve', orderController.approveOrder);
+
 router.get('/', orderController.getOrders);
 router.get('/:id', orderController.getOrderById);
 router.post('/', orderController.createOrder);

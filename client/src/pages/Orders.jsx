@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 
 const Orders = () => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
@@ -20,11 +22,11 @@ const Orders = () => {
     opportunity_id: '',
     order_number: '',
     order_date: '',
-    status: 'Pending',
+    status: 'Pending Approval',
     items: [{ product_id: '', quantity: 1, price: 0 }]
   });
 
-  const statuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+  const statuses = ['Pending Approval', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
   const fetchDropdowns = async () => {
     try {
@@ -72,11 +74,10 @@ const Orders = () => {
     const newItems = [...formData.items];
     newItems[index][field] = value;
 
-    // Auto-fill price when product changes
     if (field === 'product_id') {
       const product = products.find(p => p.product_id === Number(value));
       if (product) {
-        newItems[index]['price'] = Number(product.unit_price);
+        newItems[index]['price'] = Number(product.effective_price || product.unit_price);
       }
     }
 
@@ -101,7 +102,6 @@ const Orders = () => {
     });
   };
 
-  // Grand total calculation for form
   const calculateFormTotal = () => {
     return formData.items.reduce((sum, item) => {
       return sum + (Number(item.quantity || 0) * Number(item.price || 0));
@@ -115,8 +115,8 @@ const Orders = () => {
       opportunity_id: '',
       order_number: `ORD-${Date.now().toString().slice(-6)}`,
       order_date: new Date().toISOString().split('T')[0],
-      status: 'Pending',
-      items: [{ product_id: products[0]?.product_id || '', quantity: 1000, price: products[0]?.unit_price || 0 }]
+      status: 'Pending Approval',
+      items: [{ product_id: products[0]?.product_id || '', quantity: 1000, price: products[0]?.effective_price || products[0]?.unit_price || 0 }]
     });
     setShowModal(true);
   };
@@ -160,11 +160,11 @@ const Orders = () => {
     e.preventDefault();
     try {
       if (editId) {
-        await api.put(`/orders/${editId}`, formData);
-        Swal.fire('Updated!', 'Order details updated.', 'success');
+        const res = await api.put(`/orders/${editId}`, formData);
+        Swal.fire('Updated!', res.data.message || 'Order details updated.', 'success');
       } else {
-        await api.post('/orders', formData);
-        Swal.fire('Created!', 'Order booked successfully.', 'success');
+        const res = await api.post('/orders', formData);
+        Swal.fire('Created!', res.data.message || 'Order booked successfully.', 'success');
       }
       setShowModal(false);
       fetchOrders();
@@ -180,7 +180,7 @@ const Orders = () => {
       text: "Deleting this order will restore its items' stock. All associated invoices & logistics will also be deleted.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
+      confirmButtonColor: '#ffc107',
       cancelButtonColor: '#d33',
       confirmButtonText: 'Yes, delete order!'
     }).then(async (result) => {
@@ -197,27 +197,43 @@ const Orders = () => {
     });
   };
 
+  const handleApprove = async (id) => {
+    try {
+      await api.put(`/orders/${id}/approve`);
+      Swal.fire('Approved!', 'Order has been approved for processing.', 'success');
+      fetchOrders();
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', err.response?.data?.message || 'Approval failed.', 'error');
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'Delivered': return 'bg-success';
+      case 'Delivered': return 'bg-success text-white';
       case 'Shipped': return 'bg-info text-dark';
-      case 'Processing': return 'bg-primary-subtle text-primary';
-      case 'Pending': return 'bg-warning-subtle text-warning';
-      case 'Cancelled': return 'bg-danger-subtle text-danger';
+      case 'Processing': return 'bg-primary text-white';
+      case 'Pending Approval': return 'bg-warning text-dark';
+      case 'Cancelled': return 'bg-danger text-white';
       default: return 'bg-light text-dark';
     }
   };
+
+  const isClient = user?.role === 'Client';
+  const canApprove = ['SuperAdmin', 'CompanyAdmin', 'Manager'].includes(user?.role);
 
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="fw-bold text-dark mb-0">Order Management</h2>
-          <p className="text-muted text-sm">Draft customer bookings, configure line items, and audit totals</p>
+          <p className="text-muted text-sm">Configure crude oil order items, track billing, and manage approvals</p>
         </div>
-        <button className="btn btn-primary" onClick={handleOpenAdd}>
-          <i className="bi bi-plus-lg me-1"></i> Place Order
-        </button>
+        {!isClient && (
+          <button className="btn btn-warning fw-bold text-dark" onClick={handleOpenAdd}>
+            <i className="bi bi-plus-lg me-1"></i> Place Order
+          </button>
+        )}
       </div>
 
       {/* Orders Table */}
@@ -231,6 +247,7 @@ const Orders = () => {
                   <th>Customer</th>
                   <th>Order Date</th>
                   <th>Grand Total (₹)</th>
+                  <th>Approved By</th>
                   <th>Status</th>
                   <th className="text-end">Actions</th>
                 </tr>
@@ -238,13 +255,13 @@ const Orders = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-4">
-                      <div className="spinner-border text-primary" role="status"></div>
+                    <td colSpan="7" className="text-center py-4">
+                      <div className="spinner-border text-warning" role="status"></div>
                     </td>
                   </tr>
                 ) : orders.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-4 text-muted">No orders logged.</td>
+                    <td colSpan="7" className="text-center py-4 text-muted">No orders logged.</td>
                   </tr>
                 ) : (
                   orders.map(o => (
@@ -258,20 +275,38 @@ const Orders = () => {
                       <td>{new Date(o.order_date).toLocaleDateString()}</td>
                       <td className="fw-semibold text-primary">₹{Number(o.total_amount).toLocaleString()}</td>
                       <td>
+                        {o.approved_by_name ? (
+                          <span className="text-xs text-secondary d-flex align-items-center gap-1">
+                            <i className="bi bi-check-circle-fill text-success"></i> {o.approved_by_name}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted">n/a</span>
+                        )}
+                      </td>
+                      <td>
                         <span className={`badge ${getStatusBadge(o.status)}`}>
                           {o.status}
                         </span>
                       </td>
                       <td className="text-end">
+                        {canApprove && o.status === 'Pending Approval' && (
+                          <button className="btn btn-sm btn-success fw-bold text-white me-2" onClick={() => handleApprove(o.order_id)}>
+                            <i className="bi bi-check-lg"></i> Approve
+                          </button>
+                        )}
                         <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleOpenDetail(o.order_id)}>
                           <i className="bi bi-eye"></i>
                         </button>
-                        <button className="btn btn-sm btn-outline-primary me-2" onClick={() => handleOpenEdit(o)}>
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(o.order_id)}>
-                          <i className="bi bi-trash"></i>
-                        </button>
+                        {!isClient && (
+                          <>
+                            <button className="btn btn-sm btn-outline-primary me-2" onClick={() => handleOpenEdit(o)}>
+                              <i className="bi bi-pencil"></i>
+                            </button>
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(o.order_id)}>
+                              <i className="bi bi-trash"></i>
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -287,9 +322,9 @@ const Orders = () => {
         <div className="modal show d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
           <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content border-0 rounded-4 shadow-lg">
-              <div className="modal-header bg-dark text-white rounded-top-4">
+              <div className="modal-header bg-warning text-dark rounded-top-4">
                 <h5 className="modal-title fw-bold">Order Details: {selectedOrderDetail.order_number}</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setShowDetailModal(false)}></button>
+                <button type="button" className="btn-close" onClick={() => setShowDetailModal(false)}></button>
               </div>
               <div className="modal-body p-4">
                 <div className="row g-3 mb-4">
@@ -352,9 +387,9 @@ const Orders = () => {
         <div className="modal show d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
           <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content border-0 rounded-4 shadow-lg">
-              <div className="modal-header bg-primary text-white rounded-top-4">
+              <div className="modal-header bg-warning text-dark rounded-top-4">
                 <h5 className="modal-title fw-bold">{editId ? '📝 Edit Order Booking' : '➕ Place Order Booking'}</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
+                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
               </div>
               <form onSubmit={handleFormSubmit}>
                 <div className="modal-body p-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
@@ -428,7 +463,7 @@ const Orders = () => {
                 </div>
                 <div className="modal-footer p-3 bg-light rounded-bottom-4">
                   <button type="button" className="btn btn-outline-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary px-4">Place Order</button>
+                  <button type="submit" className="btn btn-warning fw-bold text-dark px-4">Place Order</button>
                 </div>
               </form>
             </div>

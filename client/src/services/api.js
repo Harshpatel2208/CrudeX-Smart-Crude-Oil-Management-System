@@ -10,7 +10,7 @@ const api = axios.create({
 // Interceptor to inject JWT Token in headers
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -29,8 +29,8 @@ api.interceptors.response.use(
       // Token might be expired or invalid - option to auto-logout or redirect
       // For now, let caller handle or auto clean
       if (error.response.status === 401 && window.location.pathname !== '/login') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
         window.location.href = '/login';
       }
     }

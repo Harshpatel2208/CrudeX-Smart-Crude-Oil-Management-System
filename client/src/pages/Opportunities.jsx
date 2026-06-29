@@ -263,7 +263,7 @@ const Opportunities = () => {
       {/* Kanban Board View */}
       {viewMode === 'kanban' && !loading && (
         <div className="kanban-board-container pb-3">
-          {stages.map(stage => {
+          {stages.filter(s => !stageFilter || s === stageFilter).map(stage => {
             const stageOpps = opportunities.filter(o => o.stage === stage);
             return (
               <div key={stage} className="kanban-column">

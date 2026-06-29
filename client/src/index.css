@@ -2,32 +2,33 @@
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 
 :root {
+  color-scheme: dark; /* Native dark theme elements (scrollbar, spinners, datepickers, etc.) */
   --font-family-sans-serif: 'Outfit', sans-serif;
-  --bg-light: #080b13; /* Deep navy-black body background */
+  --bg-light: #060814; /* Deep premium space-black body background */
   --sidebar-width: 270px;
   --navbar-height: 75px;
   
-  /* Dark Palette Colors */
-  --primary-color: #060911; 
-  --secondary-color: #0d111d; 
-  --card-bg: #121625; /* Sleek dark card background */
-  --input-bg: #090c14; /* Deep input background */
-  --accent-color: #f3a808; /* Premium gold accent */
-  --warning-gold: #f3a808; /* Warning Gold matches Accent */
+  /* Cyber Dark Palette Colors */
+  --primary-color: #030408; 
+  --secondary-color: #080b14; 
+  --card-bg: #0f1326; /* Sleek rich dark space card background */
+  --input-bg: #05070e; /* Deep input background */
+  --accent-color: #ffaa00; /* Premium Cyber Gold */
+  --warning-gold: #ffaa00; 
   --success-emerald: #10b981; 
   --text-primary: #f8fafc; 
-  --text-secondary: #8a94a6; /* Sleek text secondary */
-  --border-color: rgba(255, 255, 255, 0.06);
+  --text-secondary: #94a3b8; /* Cleaner blue-gray for high contrast secondary text */
+  --border-color: rgba(255, 255, 255, 0.07);
   
-  --sidebar-bg: #0d0f18; /* Dark sidebar background */
-  --sidebar-active-text: #080b13; /* Dark text for active gold capsule */
+  --sidebar-bg: #090c16; 
+  --sidebar-active-text: #05070f; /* High contrast dark text on gold active tab */
   
   /* Soft Tints */
-  --sky-tint: rgba(56, 189, 248, 0.15);
-  --emerald-tint: rgba(16, 185, 129, 0.15);
-  --amber-tint: rgba(243, 168, 8, 0.15);
-  --rose-tint: rgba(244, 63, 94, 0.15);
-  --cyan-tint: rgba(6, 182, 212, 0.15);
+  --sky-tint: rgba(56, 189, 248, 0.12);
+  --emerald-tint: rgba(16, 185, 129, 0.12);
+  --amber-tint: rgba(255, 170, 0, 0.12);
+  --rose-tint: rgba(244, 63, 94, 0.12);
+  --cyan-tint: rgba(6, 182, 212, 0.12);
 }
 
 body {
@@ -91,14 +92,16 @@ h2, .page-header-title {
   background: var(--card-bg) !important;
   border: 1px solid var(--border-color) !important;
   border-radius: 20px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
   color: var(--text-secondary) !important;
+  backdrop-filter: blur(8px);
 }
 
 .card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.35), 0 0 0 1.5px rgba(56, 189, 248, 0.2) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 0 0 1.5px rgba(255, 170, 0, 0.15) !important;
+  border-color: rgba(255, 170, 0, 0.25) !important;
 }
 
 /* Dark Gradient Utilities */
@@ -131,6 +134,13 @@ h2, .page-header-title {
   padding: 10px 16px;
   font-size: 0.9rem;
   transition: all 0.2s ease;
+}
+
+.form-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+  background-position: right 12px center !important;
+  background-size: 16px 12px !important;
+  padding-right: 40px !important;
 }
 
 .form-control:focus, .form-select:focus {
@@ -171,31 +181,31 @@ h2, .page-header-title {
 }
 
 .btn-primary, .btn-warning {
-  background-color: var(--accent-color) !important;
-  border-color: var(--accent-color) !important;
+  background: linear-gradient(135deg, #ffb800 0%, #ff7300 100%) !important;
+  border: none !important;
   color: var(--sidebar-active-text) !important;
   font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(255, 170, 0, 0.2) !important;
 }
 
 .btn-primary:hover, .btn-warning:hover {
-  background-color: #e59e00 !important;
-  border-color: #e59e00 !important;
+  background: linear-gradient(135deg, #ffc43d 0%, #ff881a 100%) !important;
   color: var(--sidebar-active-text) !important;
   transform: translateY(-1.5px);
-  box-shadow: 0 4px 12px rgba(243, 168, 8, 0.35);
+  box-shadow: 0 8px 20px rgba(255, 170, 0, 0.35) !important;
 }
 
 .btn-success {
-  background-color: var(--success-emerald);
-  border-color: var(--success-emerald);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  border: none !important;
   color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
 }
 
 .btn-success:hover {
-  background-color: #059669;
-  border-color: #059669;
+  background: linear-gradient(135deg, #34d399 0%, #047857 100%) !important;
   transform: translateY(-1.5px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35) !important;
 }
 
 .btn-outline-secondary {
@@ -206,6 +216,48 @@ h2, .page-header-title {
 .btn-outline-secondary:hover {
   background-color: #1c203a;
   color: var(--text-primary);
+}
+
+/* Custom Styles for Actions Outline Buttons */
+.btn-outline-info {
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.03) !important;
+}
+.btn-outline-info:hover {
+  background: #38bdf8 !important;
+  color: #000000 !important;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+.btn-outline-primary {
+  border: 1px solid rgba(99, 102, 241, 0.25) !important;
+  color: #818cf8 !important;
+  background: rgba(99, 102, 241, 0.03) !important;
+}
+.btn-outline-primary:hover {
+  background: #818cf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+.btn-outline-danger {
+  border: 1px solid rgba(244, 63, 94, 0.25) !important;
+  color: #fb7185 !important;
+  background: rgba(244, 63, 94, 0.03) !important;
+}
+.btn-outline-danger:hover {
+  background: #f43f5e !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+/* Custom Neon blue text accent */
+.text-primary {
+  color: #38bdf8 !important;
 }
 
 /* Custom Reset and Accent Left Card styling */
@@ -318,24 +370,26 @@ h2, .page-header-title {
 }
 
 .table th {
-  --bs-table-bg: var(--input-bg) !important;
-  background-color: var(--input-bg) !important;
-  color: var(--text-primary) !important;
+  --bs-table-bg: #0b0f1d !important;
+  background-color: #0b0f1d !important;
+  color: #94a3b8 !important;
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.725rem;
-  letter-spacing: 0.06em;
-  padding: 16px 20px;
-  border-bottom: 1px solid #334155 !important;
+  font-size: 0.725rem !important;
+  letter-spacing: 0.05em !important;
+  padding: 12px 8px !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .table td {
   --bs-table-bg: var(--card-bg) !important;
-  padding: 16px 20px;
+  padding: 12px 8px !important;
   background-color: var(--card-bg) !important;
   color: var(--text-secondary) !important;
-  border-bottom: 1px solid var(--border-color) !important;
-  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500;
+  word-break: break-word;
 }
 
 .table td.text-end, .table td:last-child {

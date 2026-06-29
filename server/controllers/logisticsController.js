@@ -25,7 +25,7 @@ const getLogistics = async (req, res) => {
 
     const [rows] = await db.query(query, params);
 
-    // Parse route coordinates safely
+    // Parse route coordinates safely and cast DECIMAL fields to numbers
     const parsedRows = rows.map(r => {
       let coords = [];
       try {
@@ -35,6 +35,9 @@ const getLogistics = async (req, res) => {
       }
       return {
         ...r,
+        current_latitude: Number(r.current_latitude) || 0,
+        current_longitude: Number(r.current_longitude) || 0,
+        progress: Number(r.progress) || 0,
         route_coordinates: coords
       };
     });
@@ -69,7 +72,23 @@ const createLogistics = async (req, res) => {
     }
 
     const logStatus = status || 'Pending';
-    const parsedCoords = route_coordinates ? (typeof route_coordinates === 'string' ? route_coordinates : JSON.stringify(route_coordinates)) : null;
+    let parsedCoords = route_coordinates ? (typeof route_coordinates === 'string' ? route_coordinates : JSON.stringify(route_coordinates)) : null;
+
+    if (!parsedCoords) {
+      // Auto-generate route based on customer city
+      const [orderRows] = await db.query(
+        'SELECT c.city FROM orders o JOIN customers c ON o.customer_id = c.customer_id WHERE o.order_id = ?',
+        [order_id]
+      );
+      const customerCity = orderRows.length > 0 ? orderRows[0].city : 'Mumbai';
+      let routeCoords = '[[19.076, 72.877], [21.170, 72.831], [22.307, 70.802], [23.022, 72.571], [28.613, 77.209]]';
+      if (customerCity && customerCity.toLowerCase() === 'singapore') {
+        routeCoords = '[[1.280, 103.851], [1.300, 103.880], [1.320, 103.900], [1.340, 103.950], [1.352, 103.990]]';
+      } else if (customerCity && customerCity.toLowerCase() === 'mumbai') {
+        routeCoords = '[[19.076, 72.877], [19.080, 72.880], [19.090, 72.900], [19.100, 72.920], [19.110, 72.950]]';
+      }
+      parsedCoords = routeCoords;
+    }
 
     const [result] = await db.query(
       `INSERT INTO logistics (order_id, transporter_name, vehicle_number, tracking_number, dispatch_date, delivery_date, status, current_latitude, current_longitude, progress, route_coordinates, eta, tenant_id) 
@@ -134,7 +153,23 @@ const updateLogistics = async (req, res) => {
       delDate = new Date().toISOString().split('T')[0];
     }
 
-    const parsedCoords = route_coordinates ? (typeof route_coordinates === 'string' ? route_coordinates : JSON.stringify(route_coordinates)) : null;
+    let parsedCoords = route_coordinates ? (typeof route_coordinates === 'string' ? route_coordinates : JSON.stringify(route_coordinates)) : null;
+
+    if (!parsedCoords) {
+      // Auto-generate route based on customer city
+      const [orderRows] = await db.query(
+        'SELECT c.city FROM orders o JOIN customers c ON o.customer_id = c.customer_id WHERE o.order_id = ?',
+        [order_id]
+      );
+      const customerCity = orderRows.length > 0 ? orderRows[0].city : 'Mumbai';
+      let routeCoords = '[[19.076, 72.877], [21.170, 72.831], [22.307, 70.802], [23.022, 72.571], [28.613, 77.209]]';
+      if (customerCity && customerCity.toLowerCase() === 'singapore') {
+        routeCoords = '[[1.280, 103.851], [1.300, 103.880], [1.320, 103.900], [1.340, 103.950], [1.352, 103.990]]';
+      } else if (customerCity && customerCity.toLowerCase() === 'mumbai') {
+        routeCoords = '[[19.076, 72.877], [19.080, 72.880], [19.090, 72.900], [19.100, 72.920], [19.110, 72.950]]';
+      }
+      parsedCoords = routeCoords;
+    }
 
     const [result] = await db.query(
       `UPDATE logistics 
@@ -240,7 +275,21 @@ const stepLogistics = async (req, res) => {
     }
 
     if (route.length === 0) {
-      return res.status(400).json({ message: 'No route coordinates available to simulate movement.' });
+      // Generate mock route coordinates on the fly based on customer's city
+      const [orderRows] = await db.query(
+        'SELECT c.city FROM orders o JOIN customers c ON o.customer_id = c.customer_id WHERE o.order_id = ?',
+        [logRecord.order_id]
+      );
+      const customerCity = orderRows.length > 0 ? orderRows[0].city : 'Mumbai';
+      let routeCoords = '[[19.076, 72.877], [21.170, 72.831], [22.307, 70.802], [23.022, 72.571], [28.613, 77.209]]';
+      if (customerCity && customerCity.toLowerCase() === 'singapore') {
+        routeCoords = '[[1.280, 103.851], [1.300, 103.880], [1.320, 103.900], [1.340, 103.950], [1.352, 103.990]]';
+      } else if (customerCity && customerCity.toLowerCase() === 'mumbai') {
+        routeCoords = '[[19.076, 72.877], [19.080, 72.880], [19.090, 72.900], [19.100, 72.920], [19.110, 72.950]]';
+      }
+      route = JSON.parse(routeCoords);
+      // Persist the generated coordinates so they don't have to be generated again
+      await db.query('UPDATE logistics SET route_coordinates = ? WHERE logistics_id = ?', [routeCoords, id]);
     }
 
     // Increment progress by 25%

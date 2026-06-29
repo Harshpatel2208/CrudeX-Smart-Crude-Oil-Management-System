@@ -219,10 +219,10 @@ const Leads = () => {
       </div>
 
       {/* Leads Table */}
-      <div className="card p-4">
-        <div className="mb-3">
-          <h5 className="fw-bold text-white mb-1">Leads Database</h5>
-          {error && <div className="text-white-50 text-sm mb-2">{error}</div>}
+      <div className="card">
+        <div className="p-4 pb-3 border-bottom border-light border-opacity-10">
+          <h5 className="fw-bold text-white mb-0">Leads Database</h5>
+          {error && <div className="text-white-50 text-sm mt-2 mb-0">{error}</div>}
         </div>
         <div className="card-body p-0">
           <div className="table-responsive">

@@ -27,20 +27,22 @@ const Logistics = () => {
 
   const statuses = ['Pending', 'In Transit', 'Delivered'];
 
-  const fetchDropdowns = async () => {
-    try {
-      const res = await api.get('/orders');
-      setOrders(res.data.filter(o => o.status === 'Processing' || o.status === 'Shipped' || o.status === 'Delivered'));
-    } catch (err) {
-      console.error('Failed to load orders for selection:', err);
-    }
-  };
-
-  const fetchLogistics = async () => {
+  const fetchLogisticsAndDropdowns = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/logistics');
-      setLogistics(res.data);
+      // Fetch logistics first
+      const logisticsRes = await api.get('/logistics');
+      setLogistics(logisticsRes.data);
+
+      // Fetch orders next
+      const ordersRes = await api.get('/orders');
+      const activeOrders = ordersRes.data.filter(o => o.status === 'Processing' || o.status === 'Shipped' || o.status === 'Delivered');
+
+      // Filter out orders that already have a logistics record
+      const linkedOrderIds = new Set(logisticsRes.data.map(l => l.order_id));
+      const unlinkedOrders = activeOrders.filter(o => !linkedOrderIds.has(o.order_id));
+
+      setOrders(unlinkedOrders);
     } catch (err) {
       console.error(err);
       Swal.fire('Error', 'Failed to retrieve logistics logs.', 'error');
@@ -50,8 +52,7 @@ const Logistics = () => {
   };
 
   useEffect(() => {
-    fetchDropdowns();
-    fetchLogistics();
+    fetchLogisticsAndDropdowns();
   }, []);
 
   const handleInputChange = (e) => {
@@ -65,6 +66,15 @@ const Logistics = () => {
   };
 
   const handleOpenAdd = () => {
+    if (orders.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Eligible Orders Found',
+        text: 'There are no active orders (Processing/Shipped) available to schedule a dispatch for.',
+        confirmButtonColor: '#ffc107'
+      });
+      return;
+    }
     setEditId(null);
     setFormData({
       order_id: orders[0]?.order_id || '',
@@ -111,7 +121,7 @@ const Logistics = () => {
         Swal.fire('Created!', 'Logistics record added.', 'success');
       }
       setShowModal(false);
-      fetchLogistics();
+      fetchLogisticsAndDropdowns();
     } catch (err) {
       console.error(err);
       Swal.fire('Error', err.response?.data?.message || 'Failed to save logistics details.', 'error');
@@ -132,7 +142,7 @@ const Logistics = () => {
         try {
           await api.delete(`/logistics/${id}`);
           Swal.fire('Deleted!', 'Tracking record removed.', 'success');
-          fetchLogistics();
+          fetchLogisticsAndDropdowns();
         } catch (err) {
           console.error(err);
           Swal.fire('Error', 'Failed to delete record.', 'error');
@@ -182,9 +192,6 @@ const Logistics = () => {
           <h2 className="fw-bold text-dark mb-0">Logistics & Shipments Tracker</h2>
           <p className="text-muted text-sm">Monitor oil tanker transits, pipeline flows, and ETA calculations</p>
         </div>
-        <button className="btn btn-warning fw-bold text-dark" onClick={handleOpenAdd}>
-          <i className="bi bi-plus-lg me-1"></i> Dispatch New Cargo
-        </button>
       </div>
 
       {/* Logistics List */}
@@ -236,6 +243,64 @@ const Logistics = () => {
                   </h6>
 
                   <div className="bg-black bg-opacity-25 rounded p-3 mb-3" style={{ border: '1px solid var(--border-color)' }}>
+                    {/* Checkpoints Tracker Timeline */}
+                    <div className="d-flex justify-content-between align-items-center position-relative my-4 px-2">
+                      {/* Progress Line Background */}
+                      <div className="position-absolute w-100 start-0" style={{
+                        height: '4px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        top: '14px',
+                        zIndex: 1,
+                        borderRadius: '2px'
+                      }}></div>
+                      {/* Active Progress Line */}
+                      <div className="position-absolute start-0" style={{
+                        height: '4px',
+                        backgroundColor: '#ffaa00',
+                        width: `${log.progress}%`,
+                        top: '14px',
+                        zIndex: 2,
+                        borderRadius: '2px',
+                        transition: 'width-delay 0.4s ease-in-out'
+                      }}></div>
+
+                      {/* Steps */}
+                      {[
+                        { label: 'Booked', threshold: 0, icon: 'bi-file-earmark-check-fill' },
+                        { label: 'Dispatched', threshold: 25, icon: 'bi-box-seam-fill' },
+                        { label: 'In Transit', threshold: 50, icon: 'bi-truck' },
+                        { label: 'Arrived Port', threshold: 75, icon: 'bi-geo-alt-fill' },
+                        { label: 'Delivered', threshold: 100, icon: 'bi-check-circle-fill' }
+                      ].map((step, idx) => {
+                        const isCompleted = log.progress >= step.threshold;
+                        return (
+                          <div key={idx} className="d-flex flex-column align-items-center position-relative" style={{ zIndex: 3 }}>
+                            <div className={`d-flex align-items-center justify-content-center rounded-circle`} style={{
+                              width: '32px',
+                              height: '32px',
+                              backgroundColor: isCompleted ? '#ffaa00' : '#121625',
+                              border: `2px solid ${isCompleted ? '#ffaa00' : 'rgba(255, 255, 255, 0.15)'}`,
+                              color: isCompleted ? '#05070f' : '#94a3b8',
+                              fontSize: '0.9rem',
+                              transition: 'all 0.3s ease-in-out',
+                              boxShadow: isCompleted ? '0 0 10px rgba(255, 170, 0, 0.4)' : 'none'
+                            }}>
+                              <i className={`bi ${step.icon}`}></i>
+                            </div>
+                            <span className="mt-2 fw-semibold text-xs text-uppercase" style={{
+                              fontSize: '0.65rem',
+                              letterSpacing: '0.5px',
+                              color: isCompleted ? '#f8fafc' : '#64748b'
+                            }}>
+                              {step.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <hr className="my-3 opacity-10" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }} />
+
                     <div className="d-flex justify-content-between text-xs text-muted mb-2">
                       <div><strong>GPS:</strong> [{log.current_latitude.toFixed(6)}, {log.current_longitude.toFixed(6)}]</div>
                       <div><strong>Destination Hub:</strong> refinery port</div>
